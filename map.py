@@ -501,7 +501,7 @@ class Map(MapBase):
 
     def __init__(self, btp: Win, atlas: ObjectsAtlas) -> None:
         super().__init__(btp, atlas)
-        self.collision_rects:list[tuple[Vec,Vec]] = []
+        self.collision_rects: list[tuple[Vec, Vec]] = []
         self.collision_update = False
 
     def on_view_update(self):
@@ -522,12 +522,11 @@ class Map(MapBase):
 
     def has_collision_update(self):
         return self.collision_update
-    
+
     def get_collision_rects(self):
         self.collision_update = False
         return self.collision_rects
-        
-                    
+
 
 """
     # Layer system 

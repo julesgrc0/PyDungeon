@@ -4,6 +4,7 @@ from utility import *
 from BTP.BTP import *
 import os
 
+
 class ObjectsAtlas:
     ASSETS_DIR = "./assets/"
 
@@ -31,7 +32,6 @@ class ObjectsAtlas:
                 return it
         return None
 
-    
     def on_ready(self):
         trigger_ready_event(self.weapons)
         trigger_ready_event(self.walls)
@@ -45,11 +45,9 @@ class ObjectsAtlas:
         trigger_ready_event(self.coins)
         trigger_ready_event(self.ui)
 
-
-
     def load_animations(self):
         files = os.listdir(ObjectsAtlas.ASSETS_DIR)
-    
+
         for file in files:
             parts = file.split('_')
             full_path = os.path.abspath(ObjectsAtlas.ASSETS_DIR+file)
@@ -57,12 +55,17 @@ class ObjectsAtlas:
             image_id = self.btp.load_image(full_path)
             if len(parts) >= 3 and parts[-1].startswith('f') and parts[-2] == 'anim':
                 name = "_".join(parts[:-2])
-                
-                char = set_animation_object(self.btp, Character, name, image_id, self.characters, Character.check_name, Character.get_name)
-                wall = set_animation_object(self.btp, Wall, name, image_id, self.walls)
-                ches = set_animation_object(self.btp, Chest, name, image_id, self.chests)
-                floo = set_animation_object(self.btp, Floor, name, image_id, self.floors)
-                coin = set_animation_object(self.btp, Coin, name, image_id, self.coins)
+
+                char = set_animation_object(
+                    self.btp, Character, name, image_id, self.characters, Character.check_name, Character.get_name)
+                wall = set_animation_object(
+                    self.btp, Wall, name, image_id, self.walls)
+                ches = set_animation_object(
+                    self.btp, Chest, name, image_id, self.chests)
+                floo = set_animation_object(
+                    self.btp, Floor, name, image_id, self.floors)
+                coin = set_animation_object(
+                    self.btp, Coin, name, image_id, self.coins)
 
                 if not char and not wall and not ches and not floo and not coin:
                     if self.animations.get(name) is None:
@@ -71,19 +74,26 @@ class ObjectsAtlas:
             else:
                 name = file.replace('.png', "")
 
-                wall = set_animation_object(self.btp, Wall, name, image_id, self.walls)
-                floo = set_animation_object(self.btp, Floor, name, image_id, self.floors)
+                wall = set_animation_object(
+                    self.btp, Wall, name, image_id, self.walls)
+                floo = set_animation_object(
+                    self.btp, Floor, name, image_id, self.floors)
 
-                colm = set_texture_object(self.btp, Column, name, image_id, self.columns)
-                sing = set_texture_object(self.btp, SingleItem, name, image_id, self.single_items, SingleItem.check_name, SingleItem.get_name)
-                weap = set_texture_object(self.btp, Weapon, name, image_id, self.weapons)
-                door = set_texture_object(self.btp, Doors, name, image_id, self.doors)
-                flas = set_texture_object(self.btp, Flask, name, image_id, self.flasks)
+                colm = set_texture_object(
+                    self.btp, Column, name, image_id, self.columns)
+                sing = set_texture_object(self.btp, SingleItem, name, image_id,
+                                          self.single_items, SingleItem.check_name, SingleItem.get_name)
+                weap = set_texture_object(
+                    self.btp, Weapon, name, image_id, self.weapons)
+                door = set_texture_object(
+                    self.btp, Doors, name, image_id, self.doors)
+                flas = set_texture_object(
+                    self.btp, Flask, name, image_id, self.flasks)
                 uii = set_texture_object(self.btp, UI, name, image_id, self.ui)
-                
+
                 if not weap and not wall and not floo and not door and not flas and not sing and not colm and not uii:
                     self.textures[name] = image_id
-        
+
         # print(self.textures)
         # print(self.animations)
 
@@ -98,7 +108,7 @@ class Character(AnimatedTextures):
 
     @staticmethod
     def get_name(name, obj):
-        return name.replace('_idle',"").replace('_run',"").replace('_hit', "")
+        return name.replace('_idle', "").replace('_run', "").replace('_hit', "")
 
     def __init__(self, btp: Win, name) -> None:
         super().__init__(btp, name)
@@ -112,7 +122,6 @@ class Character(AnimatedTextures):
 
         self.last_move: Vec = Vec()
 
-
     def add_texture(self, name, image_id):
         last = name.split('_')[-1]
 
@@ -122,19 +131,19 @@ class Character(AnimatedTextures):
             self.idle.append(image_id)
         elif last == "run":
             self.run.append(image_id)
-        
+
     def get_frame(self, dt: float):
         frames = getattr(self, self.state)
-        frame = int(self.index)%len(frames)
+        frame = int(self.index) % len(frames)
         self.index += dt * 8
         return frames[frame-1]
-    
+
     def oposite_move(self):
         self.position -= self.last_move
         self.last_move = Vec()
 
     def on_draw(self, dt: float):
-        speed = dt * 200        
+        speed = dt * 200
         move = Vec()
 
         if self.btp.is_key_down(Keyboard.RIGHT):
@@ -149,7 +158,7 @@ class Character(AnimatedTextures):
             self.state = "idle"
 
         frame = self.get_frame(dt)
-            
+
         if self.btp.is_key_down(Keyboard.UP):
             move.y -= speed/2
         elif self.btp.is_key_down(Keyboard.DOWN):
@@ -158,8 +167,9 @@ class Character(AnimatedTextures):
         if not move.is_zero():
             self.position += move
             self.last_move = move
-            
-        self.btp.draw_image(frame,self.position, self.size * Vec(self.factorx, 1), 0)
+
+        self.btp.draw_image(frame, self.position,
+                            self.size * Vec(self.factorx, 1), 0)
 
     def on_ready(self):
         self.size = self.btp.get_image_size(self.run[0]) * SCALE
@@ -172,10 +182,12 @@ class Wall(AnimatedTextures):
     def __init__(self, btp, name) -> None:
         super().__init__(btp, name)
 
+
 class Floor(AnimatedTextures):
 
     def __init__(self, btp, name) -> None:
         super().__init__(btp, name)
+
 
 class Column(StaticTexture):
 
@@ -186,10 +198,11 @@ class Column(StaticTexture):
 # map objects -> size
 
 class Doors(StaticTexture):
-    
+
     def __init__(self, btp, name) -> None:
-        super().__init__(btp, name)  
-    
+        super().__init__(btp, name)
+
+
 class Chest(AnimatedTextures):
 
     def __init__(self, btp, name) -> None:
@@ -211,20 +224,23 @@ class SingleItem(StaticTexture):
     def __init__(self, btp: Win, name) -> None:
         super().__init__(btp, name)
 
+
 class Coin(AnimatedTextures):
 
     def __init__(self, btp: Win, name) -> None:
         super().__init__(btp, name)
 
+
 class Flask(StaticTexture):
 
     def __init__(self, btp, name) -> None:
         super().__init__(btp, name)
-       
+
+
 class Weapon(StaticTexture):
 
     def __init__(self, btp, name) -> None:
-        super().__init__(btp, name)  
+        super().__init__(btp, name)
 
 
 # ui
