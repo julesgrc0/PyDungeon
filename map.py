@@ -64,6 +64,8 @@ class Chunk:
                 chunk.add_item_type(tile, Floor, atlas.floors)
             elif texture_check_name(tile.name, Column):
                 chunk.add_item_type(tile, Column, atlas.columns)
+            elif texture_check_name(tile.name, SingleItem):
+                chunk.add_item_type(tile, SingleItem, atlas.single_items)
             elif texture_check_name(tile.name, Doors):
                 chunk.add_item_type(tile, Doors, atlas.doors)
             elif texture_check_name(tile.name, Chest):
@@ -164,6 +166,11 @@ class MapBase:
         self.update_thread = False
         self.force_update = False
         # self.layer_mode = False
+
+        # entities -> names + plugin (or default)
+        # controllable -> name
+        # interactive objects -> name + plugin (or default)
+        # ...
 
     # optimizations -> thread
     def on_ready(self):
@@ -269,7 +276,7 @@ class MapCreator(MapBase):
 
     # setup -> thread + ui
     def on_ready(self):
-        tile_types = self.atlas.floors + self.atlas.walls + self.atlas.columns
+        tile_types = self.atlas.floors + self.atlas.walls + self.atlas.columns + self.atlas.single_items
 
         x = 0.5
         y = 5
@@ -505,20 +512,23 @@ class Map(MapBase):
         self.collision_update = False
 
     def on_view_update(self):
+        
         tmp = []
-        position = self.btp.camera_pos - self.btp.camera_offset
-        size = self.btp.get_render_size() - self.last_offset*2
+        size = (self.btp.get_render_size() - self.btp.camera_offset*2)
+        position = self.btp.camera_pos
+
+        size *= 2
+        position -= size/4
 
         for chunk in self.view_chunks:
-            if chunk.collide(position, size):
-                for tile in chunk.tiles_view:
-                    if tile.collision:
-                        tmp.append((tile.position, tile.size))
+            chunk.update_view()
 
-        self.collision_rects = tmp
+            for tile in chunk.tiles_view:
+                if tile.collision and self.btp.col_rect_rect(tile.position, tile.size, position, size): 
+                    tmp.append((tile.position, tile.size))
+
+        self.collision_rects = tmp 
         self.collision_update = True
-
-        # TODO: join rects who are close to each other
 
     def has_collision_update(self):
         return self.collision_update

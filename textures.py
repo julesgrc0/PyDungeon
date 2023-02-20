@@ -18,6 +18,9 @@ class AnimatedTextures:
         self.textures.append(image_id)
 
     def on_draw(self, dt: float):
+        if len(self.textures) <= 0:
+            return
+        
         frame = int(self.index) % len(self.textures)
         self.index += dt * 5
 

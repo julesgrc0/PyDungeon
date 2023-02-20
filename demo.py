@@ -24,7 +24,6 @@ class GameState:
     GAME = 1
     MAP_CREATOR = 2
 
-
 class Loading:
 
     def __init__(self, btp: Win) -> None:
@@ -47,7 +46,6 @@ class Loading:
         if self.loading >= 100:
             self.loading = 0
 
-
 class Menu:
     def __init__(self, btp: Win) -> None:
         self.btp = btp
@@ -69,16 +67,18 @@ class Menu:
         self.btn_mapcr.build("Map creator", wt + position, margin, fontsize)
 
         position.y += 100
-        file = [f.replace('.dat', '')
-                for f in os.listdir(".") if f.endswith('.dat')]
-        self.input_map.build(file[0] if len(
-            file) > 0 else "", wt + position, margin, fontsize)
+        self.input_map.build(self.get_first_map(), wt + position, margin, fontsize)
 
         position.y += 100
         self.btn_select.build("Load & Play", wt + position, margin, fontsize)
+    
+    def get_first_map(self):
+        file = [f.replace('.dat', '')
+                for f in os.listdir(".") if f.endswith('.dat')]
+        return file[0] if len(file) > 0 else ""
 
-    def reset_input(self):
-        self.input_map.build("", self.input_map.position,
+    def reset_input(self, text = ""):
+        self.input_map.build(text, self.input_map.position,
                              self.input_map.margin, self.input_map.button.text.fontsize)
 
     def on_draw_ui(self, dt: float) -> GameState:
@@ -112,24 +112,90 @@ class Menu:
     def get_selected_map(self):
         return self.last_selected
 
+class Game:
+    
+    def __init__(self, btp: Win, atlas: ObjectsAtlas) -> None:
+        self.btp = btp
+        self.last_key = 0
+        self.index = 0
 
-class Game(Win):
+        self.atlas = atlas
+        self.stats = Stats(self.btp)
+        self.map = Map(self.btp, self.atlas)
+
+        self.controllable_char: ControllableCharacter | None = None
+
+        
+    def close_game(self):
+        self.map.stop_update_thread()
+
+    def new_game(self, name):
+        self.map.clear_map()
+        self.map.load_map(name)
+        self.map.start_update_thread()
+        self.map.force_update_view()
+        
+
+    def on_load(self):
+        pass
+
+    def on_ready(self):
+        self.map.on_ready()
+
+    def on_draw(self, dt:float):
+        if self.controllable_char is None:
+            cpc = copy.copy(self.atlas.characters[self.index])
+            self.controllable_char = ControllableCharacter(cpc)
+            return
+        
+        if self.btp.is_key_pressed(Keyboard.SPACE):
+            pos = self.controllable_char.ch.position
+
+            self.index += 1
+            if self.index >= len(self.atlas.characters):
+                self.index = 0
+
+            cpc = copy.copy(self.atlas.characters[self.index])
+            self.controllable_char = ControllableCharacter(cpc)
+            self.controllable_char.ch.position = pos
+
+        self.btp.camera_follow_rect(
+            self.controllable_char.ch.position,
+            self.controllable_char.ch.size,
+            0.0, 0.0, 0.0
+        )
+
+        self.map.on_draw(dt)
+        self.controllable_char.on_draw(dt, self.map.get_collision_rects())
+        
+
+    def on_draw_ui(self, dt:float) -> bool:
+        key = self.btp.get_key_code()
+        if key != 0:
+            self.last_key = key
+
+        self.stats["FPS"] = round(1/dt) if dt != 0 else 0
+        self.stats["Key"] = self.last_key
+        self.stats.on_draw(Vec(), 20, BLACK)
+
+        return self.btp.is_key_pressed(Keyboard.ENTER)
+    
+class Demo(Win):
 
     def __init__(self) -> None:
         super().__init__()
+        print(BTP.__doc__)
+
         self.atlas = ObjectsAtlas(self)
 
-        self.menu = Menu(self)
         self.loading = Loading(self)
-        self.stats = Stats(self)
+        self.menu = Menu(self)
+        self.game = Game(self, self.atlas)
+        self.map_creator = MapCreator(self, self.atlas)
 
         self.state = GameState.MENU
 
-        self.index = 0
-        self.last_key = 0
-
-        self.map = Map(self, self.atlas)
-        self.map_creator = MapCreator(self, self.atlas)
+        
 
     def on_ready(self) -> None:
         self.atlas.on_ready()
@@ -141,7 +207,7 @@ class Game(Win):
         )
 
         self.map_creator.on_ready()
-        self.map.on_ready()
+        self.game.on_ready()
 
     def on_close(self) -> None:
         pass
@@ -154,25 +220,7 @@ class Game(Win):
             case GameState.MAP_CREATOR:
                 self.map_creator.on_draw(dt)
             case GameState.GAME:
-                current_char: Character = self.atlas.characters[self.index]
-                if self.is_key_pressed(Keyboard.SPACE):
-                    pos = current_char.position
-
-                    self.index += 1
-                    if self.index >= len(self.atlas.characters):
-                        self.index = 0
-
-                    current_char = self.atlas.characters[self.index]
-                    current_char.position = pos
-
-                self.camera_follow_rect(
-                    current_char.position,
-                    current_char.size,
-                    0.0, 0.0, 0.0
-                )
-
-                self.map.on_draw(dt)
-                current_char.on_draw(dt)
+                self.game.on_draw(dt)
 
     def on_draw_ui(self, dt: float) -> None:
         if self.is_loading():
@@ -182,7 +230,7 @@ class Game(Win):
             case GameState.MENU:
                 self.state = self.menu.on_draw_ui(dt)
                 if self.state == GameState.MAP_CREATOR:
-                    self.map.stop_update_thread()
+                    self.game.close_game()
 
                     self.map_creator.clear_map()
                     self.map_creator.load_map(self.menu.get_selected_map())
@@ -191,24 +239,16 @@ class Game(Win):
 
                 elif self.state == GameState.GAME:
                     self.map_creator.stop_update_thread()
-
-                    self.map.clear_map()
-                    self.map.load_map(self.menu.get_selected_map())
-                    self.map.start_update_thread()
-                    self.map.force_update_view()
+                    self.game.new_game(self.menu.get_selected_map())
 
             case GameState.MAP_CREATOR:
                 if self.map_creator.on_draw_ui(dt):
                     self.state = GameState.MENU
-                return
+                    self.menu.reset_input(self.menu.get_first_map())
             case GameState.GAME:
-                key = self.get_key_code()
-                if key != 0:
-                    self.last_key = key
-
-                self.stats["FPS"] = round(1/dt) if dt != 0 else 0
-                self.stats["Key"] = self.last_key
-                self.stats.on_draw(Vec(), 20, BLACK)
+                if self.game.on_draw_ui(dt):
+                    self.state = GameState.MENU
+                    self.menu.reset_input(self.menu.get_first_map())
 
     def on_draw_loading(self, dt: float) -> None:
         self.loading.on_draw(dt)
@@ -216,12 +256,12 @@ class Game(Win):
     def on_load(self) -> None:
         self.atlas.load_animations()
         self.menu.on_load()
+        self.game.on_load()
         # time.sleep(3)
 
 
 def main(args):
-    print(BTP.__doc__)
-    Game().start(1680, 1050, "Demo - BTP v{}".format(BTP.__version__), False)
+    Demo().start(1680, 1050, "Demo - BTP v{}".format(BTP.__version__), False)
     return 0
 
 

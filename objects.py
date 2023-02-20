@@ -120,8 +120,6 @@ class Character(AnimatedTextures):
         self.state = "idle"
         self.factorx = 1
 
-        self.last_move: Vec = Vec()
-
     def add_texture(self, name, image_id):
         last = name.split('_')[-1]
 
@@ -132,47 +130,79 @@ class Character(AnimatedTextures):
         elif last == "run":
             self.run.append(image_id)
 
+    def on_ready(self):
+        self.size = self.btp.get_image_size(self.run[0]) * SCALE
+
     def get_frame(self, dt: float):
         frames = getattr(self, self.state)
         frame = int(self.index) % len(frames)
         self.index += dt * 8
         return frames[frame-1]
 
-    def oposite_move(self):
-        self.position -= self.last_move
-        self.last_move = Vec()
+    def on_draw(self, dt: float):
+        frame = self.get_frame(dt)
+        self.btp.draw_image(frame, self.position,
+                            self.size * Vec(self.factorx, 1), 0)
+        
+
+class AutomaticCharacter:
+
+    def __init__(self, character: Character) -> None:
+        self.ch = character
+
+    def on_ready(self):
+        self.ch.on_ready()
 
     def on_draw(self, dt: float):
+        self.ch.on_draw(dt)
+
+class ControllableCharacter:
+
+    def __init__(self, character: Character) -> None:
+        self.ch = character
+
+    def can_move(self, move: Vec, collision_rects: list[tuple[Vec, Vec]]):
+        rect = None
+        for pos,size in collision_rects:
+            if self.ch.btp.col_rect_rect(pos, size, self.ch.position + move, self.ch.size):
+                rect = (pos,size)
+                break
+        else:
+            return True
+
+        if rect is not None and self.ch.btp.col_rect_rect(rect[0], rect[1], self.ch.position, self.ch.size):
+            return True # if stuck in a wall
+            
+        return False
+       
+    def on_ready(self):
+        self.ch.on_ready()
+    
+    def on_draw(self, dt: float, collision_rects: list[tuple[Vec, Vec]]):
         speed = dt * 200
         move = Vec()
 
-        if self.btp.is_key_down(Keyboard.RIGHT):
+        if self.ch.btp.is_key_down(Keyboard.RIGHT):
             move.x += speed
-            self.factorx = 1
-            self.state = "run"
-        elif self.btp.is_key_down(Keyboard.LEFT):
+            self.ch.factorx = 1
+            self.ch.state = "run"
+        elif self.ch.btp.is_key_down(Keyboard.LEFT):
             move.x -= speed
-            self.factorx = -1
-            self.state = "run"
-        elif self.state == "run":
-            self.state = "idle"
+            self.ch.factorx = -1
+            self.ch.state = "run"
+        elif self.ch.state == "run":
+            self.ch.state = "idle"
 
-        frame = self.get_frame(dt)
-
-        if self.btp.is_key_down(Keyboard.UP):
+        if self.ch.btp.is_key_down(Keyboard.UP):
             move.y -= speed/2
-        elif self.btp.is_key_down(Keyboard.DOWN):
+        elif self.ch.btp.is_key_down(Keyboard.DOWN):
             move.y += speed/2
 
         if not move.is_zero():
-            self.position += move
-            self.last_move = move
-
-        self.btp.draw_image(frame, self.position,
-                            self.size * Vec(self.factorx, 1), 0)
-
-    def on_ready(self):
-        self.size = self.btp.get_image_size(self.run[0]) * SCALE
+            if self.can_move(move, collision_rects):
+                self.ch.position += move
+        
+        self.ch.on_draw(dt)
 
 
 #  map objects
