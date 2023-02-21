@@ -1,281 +1,208 @@
-from textures import *
+from core import *
 from utility import *
 
-from BTP.BTP import *
-import os
+
+class Tileset(ComponentObject):
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
 
 
-class ObjectsAtlas:
-    ASSETS_DIR = "./assets/"
+class SpecialTileset(ComponentObject):
 
-    def __init__(self, btp: Win) -> None:
-        self.btp = btp
-
-        self.characters: list[Character] = []
-        self.weapons: list[Weapon] = []
-        self.walls: list[Wall] = []
-        self.floors: list[Floor] = []
-        self.doors: list[Doors] = []
-        self.chests: list[Chest] = []
-        self.flasks: list[Flask] = []
-        self.coins: list[Coin] = []
-        self.columns: list[Column] = []
-        self.single_items: list[SingleItem] = []
-        self.ui: list[UI] = []
-
-        self.animations = {}
-        self.textures = {}
-
-    def search(self, array: list[StaticTexture | AnimatedTextures], name: str):
-        for it in array:
-            if it.name == name:
-                return it
-        return None
-
-    def on_ready(self):
-        trigger_ready_event(self.weapons)
-        trigger_ready_event(self.walls)
-        trigger_ready_event(self.floors)
-        trigger_ready_event(self.doors)
-        trigger_ready_event(self.chests)
-        trigger_ready_event(self.flasks)
-        trigger_ready_event(self.characters)
-        trigger_ready_event(self.columns)
-        trigger_ready_event(self.single_items)
-        trigger_ready_event(self.coins)
-        trigger_ready_event(self.ui)
-
-    def load_animations(self):
-        files = os.listdir(ObjectsAtlas.ASSETS_DIR)
-
-        for file in files:
-            parts = file.split('_')
-            full_path = os.path.abspath(ObjectsAtlas.ASSETS_DIR+file)
-
-            image_id = self.btp.load_image(full_path)
-            if len(parts) >= 3 and parts[-1].startswith('f') and parts[-2] == 'anim':
-                name = "_".join(parts[:-2])
-
-                char = set_animation_object(
-                    self.btp, Character, name, image_id, self.characters, Character.check_name, Character.get_name)
-                wall = set_animation_object(
-                    self.btp, Wall, name, image_id, self.walls)
-                ches = set_animation_object(
-                    self.btp, Chest, name, image_id, self.chests)
-                floo = set_animation_object(
-                    self.btp, Floor, name, image_id, self.floors)
-                coin = set_animation_object(
-                    self.btp, Coin, name, image_id, self.coins)
-
-                if not char and not wall and not ches and not floo and not coin:
-                    if self.animations.get(name) is None:
-                        self.animations[name] = []
-                    self.animations[name].append(image_id)
-            else:
-                name = file.replace('.png', "")
-
-                wall = set_animation_object(
-                    self.btp, Wall, name, image_id, self.walls)
-                floo = set_animation_object(
-                    self.btp, Floor, name, image_id, self.floors)
-
-                colm = set_texture_object(
-                    self.btp, Column, name, image_id, self.columns)
-                sing = set_texture_object(self.btp, SingleItem, name, image_id,
-                                          self.single_items, SingleItem.check_name, SingleItem.get_name)
-                weap = set_texture_object(
-                    self.btp, Weapon, name, image_id, self.weapons)
-                door = set_texture_object(
-                    self.btp, Doors, name, image_id, self.doors)
-                flas = set_texture_object(
-                    self.btp, Flask, name, image_id, self.flasks)
-                uii = set_texture_object(self.btp, UI, name, image_id, self.ui)
-
-                if not weap and not wall and not floo and not door and not flas and not sing and not colm and not uii:
-                    self.textures[name] = image_id
-
-        # print(self.textures)
-        # print(self.animations)
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
 
 
-#  character
+class Character(ComponentObject):
 
-class Character(AnimatedTextures):
-
-    @staticmethod
-    def check_name(name: str, obj):
-        return name.endswith('idle') or name.endswith('run') or name.endswith('hit')
-
-    @staticmethod
-    def get_name(name, obj):
-        return name.replace('_idle', "").replace('_run', "").replace('_hit', "")
-
-    def __init__(self, btp: Win, name) -> None:
-        super().__init__(btp, name)
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+        self.name = Character.get_group_name(self.name)
 
         self.hit = []
         self.run = []
         self.idle = []
 
         self.state = "idle"
-        self.factorx = 1
 
-    def add_texture(self, name, image_id):
-        last = name.split('_')[-1]
+    @staticmethod
+    def is_grouped() -> bool:
+        return True
 
-        if last == "hit":
-            self.hit = [image_id]
-        elif last == "idle":
-            self.idle.append(image_id)
-        elif last == "run":
-            self.run.append(image_id)
+    @staticmethod
+    def get_group_name(name: str) -> str:
+        return name.replace('_idle', '').replace('_run', '').replace('_hit', '')
 
-    def on_ready(self):
-        self.size = self.btp.get_image_size(self.run[0]) * SCALE
+    @staticmethod
+    def check_name(name: str):
+        return name.endswith('idle') or name.endswith('run') or name.endswith('hit')
 
-    def get_frame(self, dt: float):
-        frames = getattr(self, self.state)
-        frame = int(self.index) % len(frames)
-        self.index += dt * 8
-        return frames[frame-1]
+    def on_ready(self, btp: Win) -> None:
+        super().on_ready(btp)
 
-    def on_draw(self, dt: float):
-        frame = self.get_frame(dt)
-        self.btp.draw_image(frame, self.position,
-                            self.size * Vec(self.factorx, 1), 0)
-        
+        if is_animated(self.texture) and len(self.texture.textures) == len(self.texture.textures_names):
+            for index in range(0, len(self.texture.textures)):
+                last = self.texture.textures_names[index].split('_')
 
-class AutomaticCharacter:
-
-    def __init__(self, character: Character) -> None:
-        self.ch = character
-
-    def on_ready(self):
-        self.ch.on_ready()
-
-    def on_draw(self, dt: float):
-        self.ch.on_draw(dt)
-
-class ControllableCharacter:
-
-    def __init__(self, character: Character) -> None:
-        self.ch = character
+                if "hit" in last:
+                    self.hit.append(self.texture.textures[index])
+                elif "idle" in last:
+                    self.idle.append(self.texture.textures[index])
+                elif "run" in last:
+                    self.run.append(self.texture.textures[index])
 
     def can_move(self, move: Vec, collision_rects: list[tuple[Vec, Vec]]):
         rect = None
-        for pos,size in collision_rects:
-            if self.ch.btp.col_rect_rect(pos, size, self.ch.position + move, self.ch.size):
-                rect = (pos,size)
+        for pos, size in collision_rects:
+            if self.btp.col_rect_rect(pos, size, self.position + move, self.size):
+                rect = (pos, size)
                 break
         else:
             return True
 
-        if rect is not None and self.ch.btp.col_rect_rect(rect[0], rect[1], self.ch.position, self.ch.size):
-            return True # if stuck in a wall
-            
+        if rect is not None and self.btp.col_rect_rect(rect[0], rect[1], self.ch.position, self.ch.size):
+            return True
+
         return False
-       
-    def on_ready(self):
-        self.ch.on_ready()
-    
-    def on_draw(self, dt: float, collision_rects: list[tuple[Vec, Vec]]):
+
+    def on_update_control(self, dt: float, collision_rects: list[tuple[Vec, Vec]]):
         speed = dt * 200
         move = Vec()
 
-        if self.ch.btp.is_key_down(Keyboard.RIGHT):
+        if self.btp.is_key_down(Keyboard.RIGHT):
             move.x += speed
-            self.ch.factorx = 1
-            self.ch.state = "run"
-        elif self.ch.btp.is_key_down(Keyboard.LEFT):
+            self.flip.x = 1
+            self.state = "run"
+        elif self.btp.is_key_down(Keyboard.LEFT):
             move.x -= speed
-            self.ch.factorx = -1
-            self.ch.state = "run"
-        elif self.ch.state == "run":
-            self.ch.state = "idle"
+            self.flip.x = -1
+            self.state = "run"
+        elif self.state == "run":
+            self.state = "idle"
 
-        if self.ch.btp.is_key_down(Keyboard.UP):
+        if self.btp.is_key_down(Keyboard.UP):
             move.y -= speed/2
-        elif self.ch.btp.is_key_down(Keyboard.DOWN):
+        elif self.btp.is_key_down(Keyboard.DOWN):
             move.y += speed/2
 
         if not move.is_zero():
             if self.can_move(move, collision_rects):
-                self.ch.position += move
-        
-        self.ch.on_draw(dt)
+                self.position += move
+
+    def get_frame(self, dt: float):
+        frames = getattr(self, self.state)
+        frame = int(self.animation_index) % len(frames)
+        self.animation_index += dt * 8
+        return frames[frame-1]
+
+    def on_draw(self, dt: float):
+        self.btp.draw_image(self.get_frame(
+            dt), self.position, self.size * self.flip, 0)
 
 
-#  map objects
+class Wall(Tileset):
+    @staticmethod
+    def check_name(name: str) -> bool:
+        return name.startswith('wall')
 
-class Wall(AnimatedTextures):
-
-    def __init__(self, btp, name) -> None:
-        super().__init__(btp, name)
-
-
-class Floor(AnimatedTextures):
-
-    def __init__(self, btp, name) -> None:
-        super().__init__(btp, name)
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
 
 
-class Column(StaticTexture):
-
-    def __init__(self, btp: Win, name) -> None:
-        super().__init__(btp, name)
-
-
-# map objects -> size
-
-class Doors(StaticTexture):
-
-    def __init__(self, btp, name) -> None:
-        super().__init__(btp, name)
-
-
-class Chest(AnimatedTextures):
-
-    def __init__(self, btp, name) -> None:
-        super().__init__(btp, name)
-
-
-# items
-
-class SingleItem(StaticTexture):
+class Floor(Tileset):
 
     @staticmethod
-    def check_name(name: str, obj):
+    def check_name(name: str) -> bool:
+        return name.startswith('floor')
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
+
+class Column(Tileset):
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
+    @staticmethod
+    def check_name(name: str) -> bool:
+        return name.startswith('colum')
+
+
+class Chest(Tileset):
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
+    @staticmethod
+    def check_name(name: str) -> bool:
+        return name.startswith('chest')
+
+
+class SingleItem(Tileset):
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
+    @staticmethod
+    def check_name(name: str) -> bool:
         return name == 'skull' or name == 'crate' or name == 'hole'
 
+
+class Doors(SpecialTileset):
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
     @staticmethod
-    def get_name(name, obj):
-        return name
+    def check_name(name: str) -> bool:
+        return name.startswith('doors')
 
-    def __init__(self, btp: Win, name) -> None:
-        super().__init__(btp, name)
+    def on_ready(self, btp: Win) -> None:
+        super().on_ready(btp)
 
-
-class Coin(AnimatedTextures):
-
-    def __init__(self, btp: Win, name) -> None:
-        super().__init__(btp, name)
-
-
-class Flask(StaticTexture):
-
-    def __init__(self, btp, name) -> None:
-        super().__init__(btp, name)
+        if self.name == "doors_leaf_open" or self.name == "doors_leaf_closed":
+            self.size = Vec(2, 2) * TILE_SIZE
+        elif self.name == "doors_frame_left" or self.name == "doors_frame_righ":
+            self.size = Vec(1, 2) * TILE_SIZE
 
 
-class Weapon(StaticTexture):
+class Coin(ComponentObject):
 
-    def __init__(self, btp, name) -> None:
-        super().__init__(btp, name)
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
+    @staticmethod
+    def check_name(name: str) -> bool:
+        return name.startswith('coin')
 
 
-# ui
+class Flask(ComponentObject):
 
-class UI(StaticTexture):
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
 
-    def __init__(self, btp: Win, name) -> None:
-        super().__init__(btp, name)
+    @staticmethod
+    def check_name(name: str) -> bool:
+        return name.startswith('flask')
+
+
+class Weapon(ComponentObject):
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
+    @staticmethod
+    def check_name(name: str) -> bool:
+        return name.startswith('weapon')
+
+
+class UI(ComponentObject):
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
+    @staticmethod
+    def check_name(name: str) -> bool:
+        return name.startswith('ui')

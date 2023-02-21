@@ -3,15 +3,12 @@ from BTP.util import *
 from BTP.gui import *
 
 
-from textures import *
+from core import *
 from utility import *
 from objects import *
 
-import random
 import threading
 import copy
-import math
-import uuid
 
 
 class MapData:
@@ -31,73 +28,53 @@ class ChunkData:
 class TileData:
 
     def __init__(self) -> None:
-        self.size: Vec
+        self.object: Any
         self.position: Vec  # chunk_pos + (tile_pos * tile_size)
-        self.name: str
         self.flip: Vec
+        self.name: str
         self.collision: bool
 
 
-class Chunk:
-    TILE_SIZE = 16 * SCALE
+class Chunk(Component):
     DEFAULT_SIZE = 6
 
-    def __init__(self, btp: Win, atlas: ObjectsAtlas, position: Vec) -> None:
+    def __init__(self, btp: Win, atlas: ObjectBaseAtlas, position: Vec) -> None:
         self.btp = btp
         self.atlas = atlas
-        self.tiles: list[AnimatedTextures | StaticTexture] = []
-        self.tiles_view: list[AnimatedTextures | StaticTexture] = []
 
-        self.tile_size = Vec(Chunk.TILE_SIZE)
+        self.tiles: list[ComponentObject] = []
+        self.tiles_view: list[ComponentObject] = []
+        self.tile_size = Vec(TILE_SIZE)
+
         self.position = position
         self.size = Vec(Chunk.DEFAULT_SIZE) * self.tile_size
 
         self.creator_info = False
 
     @staticmethod
-    def create_from_data(btp: Win, atlas: ObjectsAtlas, data: ChunkData):
+    def from_data(data: ChunkData, btp: Win, atlas: ObjectBaseAtlas) -> Self:
         chunk = Chunk(btp, atlas, data.position)
         for tile in data.tiles:
-            if texture_check_name(tile.name, Wall):
-                chunk.add_item_type(tile, Wall, atlas.walls)
-            elif texture_check_name(tile.name, Floor):
-                chunk.add_item_type(tile, Floor, atlas.floors)
-            elif texture_check_name(tile.name, Column):
-                chunk.add_item_type(tile, Column, atlas.columns)
-            elif texture_check_name(tile.name, SingleItem):
-                chunk.add_item_type(tile, SingleItem, atlas.single_items)
-            elif texture_check_name(tile.name, Doors):
-                chunk.add_item_type(tile, Doors, atlas.doors)
-            elif texture_check_name(tile.name, Chest):
-                chunk.add_item_type(tile, Chest, atlas.chests)
-
+            obj_tile = atlas.copy(tile.object, tile.name)
+            if obj_tile is not None:
+                obj_tile.position = tile.position
+                obj_tile.flip = tile.flip
+                obj_tile.collision = tile.collision
+                chunk.tiles.append(obj_tile)
         return chunk
 
-    def get_data(self) -> ChunkData:
+    def to_data(self) -> ChunkData:
         data = ChunkData()
         data.position = self.position
         for tile in self.tiles:
-            tdata = TileData()
-            tdata.name = type(tile).__name__.lower() + "_" + tile.name
-            tdata.position = tile.position
-            tdata.flip = tile.flip
-            tdata.size = tile.size
-            tdata.collision = tile.collision
-            data.tiles.append(tdata)
-
+            data_tile = TileData()
+            data_tile.object = tile.__class__
+            data_tile.flip = tile.flip
+            data_tile.name = tile.name
+            data_tile.collision = tile.collision
+            data_tile.position = tile.position
+            data.tiles.append(data_tile)
         return data
-
-    def add_item_type(self, tile: TileData, cls, array: list):
-        obj = self.atlas.search(array, texture_get_name(tile.name, cls))
-
-        if obj is not None:
-            it = copy.copy(obj)
-            it.position = tile.position
-            it.size = self.tile_size
-            it.flip = tile.flip
-            it.size = tile.size
-            it.collision = tile.collision
-            self.tiles.append(it)
 
     def creator_mode(self, show):
         self.creator_info = show
@@ -113,12 +90,11 @@ class Chunk:
         self.tiles_view = tmp
 
     def on_draw(self, dt: float):
-        # if self.btp.col_rect_rect(self.btp.camera_pos - self.btp.camera_offset, self.btp.get_render_size(), self.position, self.size):
         if self.creator_info:
             dupli_tile = {}
             collisions = []
 
-            for tile in self.tiles:
+            for tile in self.tiles_view:
                 tile.on_draw(dt)
                 if tile.collision:
                     collisions.append(tile)
@@ -150,13 +126,12 @@ class Chunk:
 
 class MapBase:
 
-    def __init__(self, btp: Win, atlas: ObjectsAtlas) -> None:
+    def __init__(self, btp: Win, atlas: ObjectBaseAtlas) -> None:
         self.btp = btp
         self.atlas = atlas
 
         self.map: list[Chunk] = []
         self.view_chunks: list[Chunk] = []
-
         self.max_chunks: Vec = Vec()
 
         self.last_position: Vec = Vec()
@@ -165,17 +140,10 @@ class MapBase:
         self.creator_mode = False
         self.update_thread = False
         self.force_update = False
-        # self.layer_mode = False
 
-        # entities -> names + plugin (or default)
-        # controllable -> name
-        # interactive objects -> name + plugin (or default)
-        # ...
-
-    # optimizations -> thread
     def on_ready(self):
         self.max_chunks = vec_ceil(
-            (self.btp.get_render_size()/(Chunk.DEFAULT_SIZE * Chunk.TILE_SIZE))) + 1
+            (self.btp.get_render_size()/(Chunk.DEFAULT_SIZE * TILE_SIZE))) + 1
 
     def start_update_thread(self):
         if not self.update_thread:
@@ -226,8 +194,8 @@ class MapBase:
         map_data = MapData()
 
         for chunk in self.map:
-            data = chunk.get_data()
-            map_data.chunks.append(data)
+            chunkdata: ChunkData = chunk.to_data()
+            map_data.chunks.append(chunkdata)
 
         storage = Storage()
         storage.state = map_data
@@ -242,8 +210,8 @@ class MapBase:
             map_storage.reset_state(MapData())
             return False
 
-        for chunk in map_data.chunks:
-            chunk = Chunk.create_from_data(self.btp, self.atlas, chunk)
+        for chunkdata in map_data.chunks:
+            chunk: Chunk = Chunk.from_data(chunkdata, self.btp, self.atlas)
             chunk.creator_mode(self.creator_mode)
             self.map.append(chunk)
 
@@ -252,17 +220,15 @@ class MapBase:
 
 class MapCreator(MapBase):
 
-    def __init__(self, btp: Win, atlas: ObjectsAtlas) -> None:
+    def __init__(self, btp: Win, atlas: ObjectBaseAtlas) -> None:
         super().__init__(btp, atlas)
         self.creator_mode = True
 
-        self.selectable_tiles_normal: list[StaticTexture | AnimatedTextures] = [
-        ]
-        self.selectable_tiles_special: list[StaticTexture | AnimatedTextures] = [
-        ]
+        self.selectable_tiles_normal: list[ComponentObject] = []
+        self.selectable_tiles_special: list[ComponentObject] = []
         self.selectable_mode = True
 
-        self.selected: StaticTexture | AnimatedTextures | None = None
+        self.selected: ComponentObject | None = None
 
         self.save_btn = Button(self.btp)
         self.info_btn = Button(self.btp)
@@ -276,19 +242,17 @@ class MapCreator(MapBase):
 
     # setup -> thread + ui
     def on_ready(self):
-        tile_types = self.atlas.floors + self.atlas.walls + self.atlas.columns + self.atlas.single_items
+        tile_size = TILE_SIZE/2
 
+        tile_types = self.atlas.from_instance(Tileset)
         x = 0.5
         y = 5
-        tile_size = Chunk.TILE_SIZE/2
         for t in tile_types:
             cpt = copy.copy(t)
-
-            cpt.size = Vec(tile_size)
+            cpt.size /= 2
             cpt.position = Vec(x, y) * tile_size
 
             self.selectable_tiles_normal.append(cpt)
-
             y += 1
             if y >= int(self.btp.get_render_size().y/tile_size) - 1:
                 y = 5
@@ -296,16 +260,16 @@ class MapCreator(MapBase):
 
         x = 0.5 * tile_size
         y = 5 * tile_size
-        tile_types = self.atlas.doors + self.atlas.chests
+        tile_types = self.atlas.from_instance(SpecialTileset)
+
         for t in tile_types:
             cpt = copy.copy(t)
-            cpt.size /= 2
             cpt.position = Vec(x, y)
-
+            cpt.size /= 2
             self.selectable_tiles_special.append(cpt)
 
             y += cpt.size.y
-            if y >= int(self.btp.get_render_size().y) - 1:
+            if y >= int(self.btp.get_render_size().y):
                 y = 5 * tile_size
                 x += tile_size
 
@@ -313,7 +277,7 @@ class MapCreator(MapBase):
         self.save_btn.build("Export & exit", Vec(30, 100), Vec(20, 10))
         self.type_btn.build("Normal/Special tiles", Vec(30, 150), Vec(20, 10))
 
-        self.btp.camera_pos = Vec(-(Chunk.DEFAULT_SIZE * Chunk.TILE_SIZE))
+        self.btp.camera_pos = Vec(-(Chunk.DEFAULT_SIZE * TILE_SIZE))
         self.btp.camera_offset = Vec()
 
         super().on_ready()
@@ -339,8 +303,8 @@ class MapCreator(MapBase):
         if move.is_zero():
             self.fix_camera_pos()
             pos = Vec(
-                int(self.btp.mouse.x/Chunk.TILE_SIZE) * Chunk.TILE_SIZE,
-                int(self.btp.mouse.y/Chunk.TILE_SIZE) * Chunk.TILE_SIZE
+                int(self.btp.mouse.x/TILE_SIZE) * TILE_SIZE,
+                int(self.btp.mouse.y/TILE_SIZE) * TILE_SIZE
             ) + self.btp.camera_pos
 
         if self.btp.is_key_pressed(Keyboard.SPACE):
@@ -367,28 +331,15 @@ class MapCreator(MapBase):
             if self.btp.is_mouse_pressed():
                 self.fix_camera_pos()
                 pos = Vec(
-                    int(self.btp.mouse.x/Chunk.TILE_SIZE) * Chunk.TILE_SIZE,
-                    int(self.btp.mouse.y/Chunk.TILE_SIZE) * Chunk.TILE_SIZE
+                    int(self.btp.mouse.x/TILE_SIZE) * TILE_SIZE,
+                    int(self.btp.mouse.y/TILE_SIZE) * TILE_SIZE
                 ) + self.btp.camera_pos
 
                 if self.selected is not None:
                     cp = copy.copy(self.selected)
                     cp.position = pos
-                    if self.selectable_mode or isinstance(self.selected, Chest):
-                        cp.size = Vec(Chunk.TILE_SIZE)
-                    else:
-                        size = self.selected.size
-                        if isinstance(self.selected, Doors):
-                            if self.selected.name == "all":
-                                size = Vec(4, 2) * Chunk.TILE_SIZE
-                            elif self.selected.name == "leaf_open" or self.selected.name == "leaf_closed":
-                                size = Vec(2, 2) * Chunk.TILE_SIZE
-                            elif self.selected.name == "frame_left" or self.selected.name == "frame_righ":
-                                size = Vec(1, 2) * Chunk.TILE_SIZE
-
-                        cp.size = size
-
                     cp.flip = Vec(self.flip.x, self.flip.y)
+                    cp.size *= 2
                     if self.collision_mode:
                         cp.collision = True
 
@@ -407,7 +358,7 @@ class MapCreator(MapBase):
                 if self.collision_mode:
                     color = Color(0, 0, 255, 255)
 
-            self.btp.draw_rectline(pos, Vec(Chunk.TILE_SIZE), color)
+            self.btp.draw_rectline(pos, Vec(TILE_SIZE), color)
 
     def on_draw_ui(self, dt: float):
         self.btp.draw_rect(Vec(), self.btp.get_render_size()
@@ -467,9 +418,9 @@ class MapCreator(MapBase):
         return False
 
     # remove add tile
-    def map_add(self, item: AnimatedTextures | StaticTexture):
-        c_pos: Vec = vec_floor(item.position/(Chunk.TILE_SIZE *
-                               Chunk.DEFAULT_SIZE)) * (Chunk.TILE_SIZE * Chunk.DEFAULT_SIZE)
+    def map_add(self, item: ComponentObject):
+        c_pos: Vec = vec_floor(item.position/(TILE_SIZE *
+                               Chunk.DEFAULT_SIZE)) * (TILE_SIZE * Chunk.DEFAULT_SIZE)
 
         chunk = list(filter(lambda chunk: chunk.position == c_pos, self.map))
         if chunk is not None and len(chunk) >= 1:
@@ -480,11 +431,12 @@ class MapCreator(MapBase):
             newc.tiles.append(item)
 
             self.map.append(newc)
-            self.force_update_view()
+
+        self.force_update_view()
 
     def map_remove(self, position: Vec):
         c_pos: Vec = vec_floor(position/(Chunk.DEFAULT_SIZE *
-                               Chunk.TILE_SIZE)) * (Chunk.DEFAULT_SIZE * Chunk.TILE_SIZE)
+                               TILE_SIZE)) * (Chunk.DEFAULT_SIZE * TILE_SIZE)
 
         chunk = list(filter(lambda chunk: chunk.position == c_pos, self.map))
         if chunk is not None and len(chunk) == 1:
@@ -499,20 +451,19 @@ class MapCreator(MapBase):
 
     def fix_camera_pos(self):
         self.btp.camera_pos = Vec(
-            int(self.btp.camera_pos.x/Chunk.TILE_SIZE) * Chunk.TILE_SIZE,
-            int(self.btp.camera_pos.y/Chunk.TILE_SIZE) * Chunk.TILE_SIZE
+            int(self.btp.camera_pos.x/TILE_SIZE) * TILE_SIZE,
+            int(self.btp.camera_pos.y/TILE_SIZE) * TILE_SIZE
         )
 
 
 class Map(MapBase):
 
-    def __init__(self, btp: Win, atlas: ObjectsAtlas) -> None:
+    def __init__(self, btp: Win, atlas: ObjectBaseAtlas) -> None:
         super().__init__(btp, atlas)
         self.collision_rects: list[tuple[Vec, Vec]] = []
         self.collision_update = False
 
     def on_view_update(self):
-        
         tmp = []
         size = (self.btp.get_render_size() - self.btp.camera_offset*2)
         position = self.btp.camera_pos
@@ -524,10 +475,10 @@ class Map(MapBase):
             chunk.update_view()
 
             for tile in chunk.tiles_view:
-                if tile.collision and self.btp.col_rect_rect(tile.position, tile.size, position, size): 
+                if tile.collision and self.btp.col_rect_rect(tile.position, tile.size, position, size):
                     tmp.append((tile.position, tile.size))
 
-        self.collision_rects = tmp 
+        self.collision_rects = tmp
         self.collision_update = True
 
     def has_collision_update(self):

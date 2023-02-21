@@ -12,7 +12,7 @@ import math
 import time
 import threading
 
-from textures import *
+from core import *
 from objects import *
 from utility import *
 from map import *
@@ -23,6 +23,7 @@ class GameState:
     MENU = 0
     GAME = 1
     MAP_CREATOR = 2
+
 
 class Loading:
 
@@ -46,6 +47,7 @@ class Loading:
         if self.loading >= 100:
             self.loading = 0
 
+
 class Menu:
     def __init__(self, btp: Win) -> None:
         self.btp = btp
@@ -67,17 +69,18 @@ class Menu:
         self.btn_mapcr.build("Map creator", wt + position, margin, fontsize)
 
         position.y += 100
-        self.input_map.build(self.get_first_map(), wt + position, margin, fontsize)
+        self.input_map.build(self.get_first_map(), wt +
+                             position, margin, fontsize)
 
         position.y += 100
         self.btn_select.build("Load & Play", wt + position, margin, fontsize)
-    
+
     def get_first_map(self):
         file = [f.replace('.dat', '')
                 for f in os.listdir(".") if f.endswith('.dat')]
         return file[0] if len(file) > 0 else ""
 
-    def reset_input(self, text = ""):
+    def reset_input(self, text=""):
         self.input_map.build(text, self.input_map.position,
                              self.input_map.margin, self.input_map.button.text.fontsize)
 
@@ -112,9 +115,10 @@ class Menu:
     def get_selected_map(self):
         return self.last_selected
 
+
 class Game:
-    
-    def __init__(self, btp: Win, atlas: ObjectsAtlas) -> None:
+
+    def __init__(self, btp: Win, atlas: ObjectBaseAtlas) -> None:
         self.btp = btp
         self.last_key = 0
         self.index = 0
@@ -123,9 +127,8 @@ class Game:
         self.stats = Stats(self.btp)
         self.map = Map(self.btp, self.atlas)
 
-        self.controllable_char: ControllableCharacter | None = None
+        self.character: Character
 
-        
     def close_game(self):
         self.map.stop_update_thread()
 
@@ -134,42 +137,28 @@ class Game:
         self.map.load_map(name)
         self.map.start_update_thread()
         self.map.force_update_view()
-        
-
-    def on_load(self):
-        pass
 
     def on_ready(self):
         self.map.on_ready()
 
-    def on_draw(self, dt:float):
-        if self.controllable_char is None:
-            cpc = copy.copy(self.atlas.characters[self.index])
-            self.controllable_char = ControllableCharacter(cpc)
-            return
-        
-        if self.btp.is_key_pressed(Keyboard.SPACE):
-            pos = self.controllable_char.ch.position
+        characters = self.atlas.from_instance(Character)
+        self.character = self.atlas.copy(
+            Character, random.choice(characters).name)
 
-            self.index += 1
-            if self.index >= len(self.atlas.characters):
-                self.index = 0
-
-            cpc = copy.copy(self.atlas.characters[self.index])
-            self.controllable_char = ControllableCharacter(cpc)
-            self.controllable_char.ch.position = pos
+    def on_draw(self, dt: float):
 
         self.btp.camera_follow_rect(
-            self.controllable_char.ch.position,
-            self.controllable_char.ch.size,
+            self.character.position,
+            self.character.size,
             0.0, 0.0, 0.0
         )
 
         self.map.on_draw(dt)
-        self.controllable_char.on_draw(dt, self.map.get_collision_rects())
-        
 
-    def on_draw_ui(self, dt:float) -> bool:
+        self.character.on_update_control(dt, self.map.get_collision_rects())
+        self.character.on_draw(dt)
+
+    def on_draw_ui(self, dt: float) -> bool:
         key = self.btp.get_key_code()
         if key != 0:
             self.last_key = key
@@ -179,30 +168,45 @@ class Game:
         self.stats.on_draw(Vec(), 20, BLACK)
 
         return self.btp.is_key_pressed(Keyboard.ENTER)
-    
+
+
 class Demo(Win):
+    ASSETS_DIR = "./assets/"
 
     def __init__(self) -> None:
         super().__init__()
         print(BTP.__doc__)
 
-        self.atlas = ObjectsAtlas(self)
+        self.texture_atlas = TextureAtlas()
+        self.objects_atlas = ObjectBaseAtlas()
+        self.object_base: list[ComponentObject] = [
+            Character,
+            Doors,
+            Floor,
+            Wall,
+            Coin,
+            Chest,
+            SingleItem,
+            Flask,
+            Weapon,
+            UI
+        ]
 
         self.loading = Loading(self)
         self.menu = Menu(self)
-        self.game = Game(self, self.atlas)
-        self.map_creator = MapCreator(self, self.atlas)
+        self.game = Game(self, self.objects_atlas)
+        self.map_creator = MapCreator(self, self.objects_atlas)
 
         self.state = GameState.MENU
 
-        
-
     def on_ready(self) -> None:
-        self.atlas.on_ready()
+        for obj in self.objects_atlas.objects:
+            if isinstance(obj, ComponentObject):
+                obj.on_ready(self)
 
         self.camera_follow_rect(
             Vec(),
-            Vec(Chunk.TILE_SIZE),
+            Vec(TILE_SIZE),
             0.0, 0.0, 0.0
         )
 
@@ -254,9 +258,23 @@ class Demo(Win):
         self.loading.on_draw(dt)
 
     def on_load(self) -> None:
-        self.atlas.load_animations()
-        self.menu.on_load()
-        self.game.on_load()
+        try:
+            files = os.listdir(Demo.ASSETS_DIR)
+            for filename in files:
+                texture_path = os.path.abspath(Demo.ASSETS_DIR + filename)
+                texture_id = self.load_image(texture_path)
+
+                self.texture_atlas.add(filename, texture_id)
+
+            for type in self.object_base:
+                self.objects_atlas.register(type)
+
+            for texture in self.texture_atlas.textures:
+                self.objects_atlas.add(texture)
+
+            self.menu.on_load()
+        except Exception as e:
+            print(e)
         # time.sleep(3)
 
 

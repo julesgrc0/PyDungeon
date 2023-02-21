@@ -4,6 +4,7 @@ from BTP.BTP import *
 from functools import wraps
 
 SCALE = 6
+TILE_SIZE = 16 * SCALE
 
 
 class Keyboard:
