@@ -61,11 +61,12 @@ class Character(ComponentObject):
         else:
             return True
 
-        if rect is not None and self.btp.col_rect_rect(rect[0], rect[1], self.ch.position, self.ch.size):
+        if rect is not None and self.btp.col_rect_rect(rect[0], rect[1], self.position, self.size):
             return True
 
         return False
 
+    
     def on_update_control(self, dt: float, collision_rects: list[tuple[Vec, Vec]]):
         speed = dt * 200
         move = Vec()

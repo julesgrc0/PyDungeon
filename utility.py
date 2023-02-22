@@ -22,6 +22,15 @@ BLACK = Color(20, 20, 20, 255)
 WHITE = Color(250, 249, 246, 255)
 
 
+def rotate_around(pos: Vec, origin: Vec,  deg: float) -> Vec:
+    theta = (deg*math.pi)/180
+
+    newx = math.cos(theta) * (pos.x-origin.x) - math.sin(theta) * (pos.y-origin.y) + origin.x
+    newy = math.sin(theta) * (pos.x-origin.x) + math.cos(theta) * (pos.y-origin.y) + origin.y
+
+    return Vec(newx,newy)
+
+
 def from_vec_str(s: str) -> Vec:
     cls = s.replace('Vec(x=', '').replace(')', '').replace('y=', '').split(';')
     return Vec(float(cls[0]), float(cls[1]))

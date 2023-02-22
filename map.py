@@ -448,6 +448,7 @@ class MapCreator(MapBase):
                 chunk.tiles.remove(tile[0])
                 if len(chunk.tiles) <= 0:
                     self.map.remove(chunk)
+        self.force_update_view()
 
     def fix_camera_pos(self):
         self.btp.camera_pos = Vec(
@@ -462,6 +463,8 @@ class Map(MapBase):
         super().__init__(btp, atlas)
         self.collision_rects: list[tuple[Vec, Vec]] = []
         self.collision_update = False
+        self.view_tile_count = 0
+
 
     def on_view_update(self):
         tmp = []
@@ -471,12 +474,15 @@ class Map(MapBase):
         size *= 2
         position -= size/4
 
+        tcount = 0
         for chunk in self.view_chunks:
             chunk.update_view()
 
             for tile in chunk.tiles_view:
                 if tile.collision and self.btp.col_rect_rect(tile.position, tile.size, position, size):
                     tmp.append((tile.position, tile.size))
+            tcount += len(chunk.tiles_view)
+        self.view_tile_count = tcount
 
         self.collision_rects = tmp
         self.collision_update = True

@@ -2,7 +2,7 @@ from BTP.BTP import *
 from typing import Any, Protocol, Self, runtime_checkable
 import copy
 
-from utility import SCALE
+from utility import SCALE, timedbg
 
 
 class Texture:

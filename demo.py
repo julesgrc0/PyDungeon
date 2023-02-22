@@ -129,6 +129,8 @@ class Game:
 
         self.character: Character
 
+        self.angle = 0
+
     def close_game(self):
         self.map.stop_update_thread()
 
@@ -158,6 +160,17 @@ class Game:
         self.character.on_update_control(dt, self.map.get_collision_rects())
         self.character.on_draw(dt)
 
+        self.angle += dt * 100
+
+        # pos = self.character.position + Vec(self.character.size.x/4, self.character.size.y/4)
+        # size = Vec(50)
+
+
+        # newp = rotate_around(pos, pos+size/2, self.angle)
+        # self.btp.draw_rectrot(newp, size, self.angle, Color(255, 0, 0, 255))
+
+
+        
     def on_draw_ui(self, dt: float) -> bool:
         key = self.btp.get_key_code()
         if key != 0:
@@ -165,6 +178,9 @@ class Game:
 
         self.stats["FPS"] = round(1/dt) if dt != 0 else 0
         self.stats["Key"] = self.last_key
+        self.stats["View chunk"] = len(self.map.view_chunks)
+        self.stats["View tile"] = self.map.view_tile_count
+
         self.stats.on_draw(Vec(), 20, BLACK)
 
         return self.btp.is_key_pressed(Keyboard.ENTER)
