@@ -146,6 +146,27 @@ class Component(Protocol):
     def on_ready(self, btp: Win) -> None: ...
 
 
+class ActionEvent:
+    def __init__(self, name: str = "", data: Any = None) -> None:
+        self.name: str = name
+        self.data: Any = data
+
+# TODO: action object ==> traps, pickable items, etc...
+class ActionObject(ObjectBase):
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
+
+    # action: collision data: player(ref)
+    # action: collect data: player(ref)
+    # action: default data: None
+    #  etc...
+
+    def on_action(self, action: ActionEvent):
+        pass
+
+
 class ComponentObject(ObjectBase, Component):
 
     def __init__(self, texture: Texture | AnimatedTexture) -> None:
