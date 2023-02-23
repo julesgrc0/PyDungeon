@@ -129,8 +129,6 @@ class Game:
 
         self.character: Character
 
-        self.angle = 0
-
     def close_game(self):
         self.map.stop_update_thread()
 
@@ -143,9 +141,9 @@ class Game:
     def on_ready(self):
         self.map.on_ready()
 
-        characters = self.atlas.from_instance(Character)
-        self.character = self.atlas.copy(
-            Character, random.choice(characters).name)
+        characters: list[Character] = self.atlas.from_instance(Character)
+        self.character = self.atlas.copy(Character, random.choice(characters).name)
+        self.character.action_data = DemoActionData(role="player")
 
     def on_draw(self, dt: float):
 
@@ -157,15 +155,13 @@ class Game:
 
         self.map.on_draw(dt)
 
-        self.character.on_update_control(dt, self.map.get_collision_rects())
+        self.character.on_update_control(dt, self.map.get_collision_tiles())
         self.character.on_draw(dt)
 
-        self.angle += dt * 100
 
+        #self.angle += dt * 100
         # pos = self.character.position + Vec(self.character.size.x/4, self.character.size.y/4)
         # size = Vec(50)
-
-
         # newp = rotate_around(pos, pos+size/2, self.angle)
         # self.btp.draw_rectrot(newp, size, self.angle, Color(255, 0, 0, 255))
 

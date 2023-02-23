@@ -180,7 +180,6 @@ class MapBase:
                 self.on_view_update()
 
     # draw chunks
-
     def on_draw(self, dt: float):
         for chunk in self.view_chunks:
             chunk.on_draw(dt)
@@ -230,6 +229,7 @@ class MapCreator(MapBase):
 
         self.selected: ComponentObject | None = None
 
+        self.exit_btn = Button(self.btp)
         self.save_btn = Button(self.btp)
         self.info_btn = Button(self.btp)
         self.type_btn = Button(self.btp)
@@ -273,9 +273,10 @@ class MapCreator(MapBase):
                 y = 5 * tile_size
                 x += tile_size
 
-        self.info_btn.build("Show/Hide Infos", Vec(30, 50), Vec(20, 10))
-        self.save_btn.build("Export & exit", Vec(30, 100), Vec(20, 10))
-        self.type_btn.build("Normal/Special tiles", Vec(30, 150), Vec(20, 10))
+        self.exit_btn.build("Quitter", Vec(30, 10), Vec(20, 10))
+        self.info_btn.build("Show/Hide Infos", Vec(30, 60), Vec(20, 10))
+        self.save_btn.build("Exporter & Quitter", Vec(30, 110), Vec(20, 10))
+        self.type_btn.build("Normal/Special tiles", Vec(30, 160), Vec(20, 10))
 
         self.btp.camera_pos = Vec(-(Chunk.DEFAULT_SIZE * TILE_SIZE))
         self.btp.camera_offset = Vec()
@@ -363,6 +364,12 @@ class MapCreator(MapBase):
     def on_draw_ui(self, dt: float):
         self.btp.draw_rect(Vec(), self.btp.get_render_size()
                            * Vec(0.22, 1), BLACK)
+
+        btne_color = WHITE, Color(0,0,0,50)
+        if self.exit_btn.is_hover():
+            btne_color = Color(230, 230, 230, 255), Color(0, 0, 0, 200)
+        if self.exit_btn.draw(*btne_color):
+            return True
 
         btni_color = WHITE, Color(0, 0, 0, 50)
         if self.info_btn.is_hover():
@@ -461,7 +468,7 @@ class Map(MapBase):
 
     def __init__(self, btp: Win, atlas: ObjectBaseAtlas) -> None:
         super().__init__(btp, atlas)
-        self.collision_rects: list[tuple[Vec, Vec]] = []
+        self.collision_tiles: list[ComponentObject] = []
         self.collision_update = False
         self.view_tile_count = 0
 
@@ -477,22 +484,22 @@ class Map(MapBase):
         tcount = 0
         for chunk in self.view_chunks:
             chunk.update_view()
-
             for tile in chunk.tiles_view:
-                if tile.collision and self.btp.col_rect_rect(tile.position, tile.size, position, size):
-                    tmp.append((tile.position, tile.size))
+                if tile.collision and self.btp.col_rect_rect(tile.position, tile.size, position, size) and isinstance(tile, ComponentObject):
+                    tmp.append(tile)
+
             tcount += len(chunk.tiles_view)
         self.view_tile_count = tcount
 
-        self.collision_rects = tmp
+        self.collision_tiles = tmp
         self.collision_update = True
 
     def has_collision_update(self):
         return self.collision_update
 
-    def get_collision_rects(self):
+    def get_collision_tiles(self) -> list[ComponentObject]:
         self.collision_update = False
-        return self.collision_rects
+        return self.collision_tiles
 
 
 """

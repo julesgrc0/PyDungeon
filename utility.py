@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 import math
 import time
 from BTP.BTP import *
@@ -6,6 +7,14 @@ from functools import wraps
 SCALE = 6
 TILE_SIZE = 16 * SCALE
 
+
+class DemoActionTypes:
+    COLLISION = "collision"
+    COLLISION_IN = "collision_in"
+
+@dataclass
+class DemoActionData:
+    role: str = field(default="none")    
 
 class Keyboard:
     LEFT = 263
@@ -29,6 +38,19 @@ def rotate_around(pos: Vec, origin: Vec,  deg: float) -> Vec:
     newy = math.sin(theta) * (pos.x-origin.x) + math.cos(theta) * (pos.y-origin.y) + origin.y
 
     return Vec(newx,newy)
+
+
+def rect_rect_distance(p1: Vec, s1: Vec, p2: Vec, s2: Vec):
+    dx = max(p1.x, p2.x) - min(p1.x + s1.x, p2.x + s2.x)
+    dy = max(p1.y, p2.y) - min(p1.y + s1.y, p2.y + s2.y)
+
+    return math.sqrt(dx**2 + dy**2)
+
+
+def rect_rect_center(p1: Vec, s1: Vec, p2: Vec, s2: Vec):
+  center1 = Vec(p1.x + s1.x/2, p1.y + s1.y/2)
+  center2 = Vec(p2.x + s2.x/2, p2.y + s2.y/2)
+  return Vec(center2.x - center1.x, center2.y - center1.y)
 
 
 def from_vec_str(s: str) -> Vec:

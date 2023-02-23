@@ -1,5 +1,5 @@
 from BTP.BTP import *
-from typing import Any, Protocol, Self, runtime_checkable
+from typing import Any, Protocol, Self, runtime_checkable, Optional
 import copy
 
 from utility import SCALE, timedbg
@@ -147,31 +147,33 @@ class Component(Protocol):
 
 
 class ActionEvent:
-    def __init__(self, name: str = "", data: Any = None) -> None:
-        self.name: str = name
-        self.data: Any = data
+    
+    @staticmethod
+    def create(name: str, object: Optional[ObjectBase] = None, data: Any = None):
+        return ActionEvent(name, object, data)
 
-# TODO: action object ==> traps, pickable items, etc...
+    def __init__(self, name: str, object: Optional[ObjectBase], data: Any) -> None:
+        self.name: str = name
+        self.object: Optional[ObjectBase] = object
+        self.data = data
+
 class ActionObject(ObjectBase):
 
     def __init__(self, texture: Texture | AnimatedTexture) -> None:
         super().__init__(texture)
 
-
-    # action: collision data: player(ref)
-    # action: collect data: player(ref)
-    # action: default data: None
-    #  etc...
-
     def on_action(self, action: ActionEvent):
         pass
 
 
-class ComponentObject(ObjectBase, Component):
+class ComponentObject(ActionObject, Component):
 
     def __init__(self, texture: Texture | AnimatedTexture) -> None:
         super().__init__(texture)
         self.btp: Win | None = None
+
+    def on_action(self, action: ActionEvent) -> Any:
+        return None
 
     def get_frame(self, dt: float) -> int:
         if not is_animated(self.texture):
