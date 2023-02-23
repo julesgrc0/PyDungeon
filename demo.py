@@ -1,19 +1,12 @@
 from BTP.BTP import *
-from BTP import BTP
-
-from BTP.gui import *
-from BTP.util import *
+import BTP.BTP
 
 import os
-import re
 import sys
 import random
-import math
-import time
-import threading
 
 from core import *
-from objects import *
+from components import *
 from utility import *
 from map import *
 
@@ -154,10 +147,8 @@ class Game:
         )
 
         self.map.on_draw(dt)
-
         self.character.on_update_control(dt, self.map.get_collision_tiles())
         self.character.on_draw(dt)
-
 
         #self.angle += dt * 100
         # pos = self.character.position + Vec(self.character.size.x/4, self.character.size.y/4)
@@ -179,7 +170,7 @@ class Game:
 
         self.stats.on_draw(Vec(), 20, BLACK)
 
-        return self.btp.is_key_pressed(Keyboard.ENTER)
+        return self.btp.is_key_pressed(Keyboard.ENTER) or not self.character.is_alive()
 
 
 class Demo(Win):
@@ -187,7 +178,7 @@ class Demo(Win):
 
     def __init__(self) -> None:
         super().__init__()
-        print(BTP.__doc__)
+        print(BTP.BTP.__doc__)
 
         self.texture_atlas = TextureAtlas()
         self.objects_atlas = ObjectBaseAtlas()
@@ -291,7 +282,7 @@ class Demo(Win):
 
 
 def main(args):
-    Demo().start(1680, 1050, "Demo - BTP v{}".format(BTP.__version__), False)
+    Demo().start(1680, 1050, "Demo - BTP v{}".format(BTP.BTP.__version__), False)
     return 0
 
 

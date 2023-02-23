@@ -1,8 +1,11 @@
+from BTP.BTP import Color, Vec, Win
+
 from dataclasses import dataclass, field
+from functools import wraps
+
 import math
 import time
-from BTP.BTP import *
-from functools import wraps
+
 
 SCALE = 6
 TILE_SIZE = 16 * SCALE

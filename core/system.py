@@ -147,7 +147,7 @@ class Component(Protocol):
 
 
 class ActionEvent:
-    
+
     @staticmethod
     def create(name: str, object: Optional[ObjectBase] = None, data: Any = None):
         return ActionEvent(name, object, data)
@@ -156,6 +156,7 @@ class ActionEvent:
         self.name: str = name
         self.object: Optional[ObjectBase] = object
         self.data = data
+
 
 class ActionObject(ObjectBase):
 
