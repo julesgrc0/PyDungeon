@@ -75,21 +75,19 @@ class Character(ComponentObject):
             return True
 
         if ref is not None and self.btp.col_rect_rect(ref.position, ref.size, self.position, self.size):
-            # TODO: action data in class
-            can = ref.on_action(ActionEvent.create(
-                DemoActionTypes.COLLISION_IN, self, self.action_data))
-            return isinstance(can, bool) and can
+            can = ref.on_action(ActionEvent.create(DemoActionTypes.COLLISION_IN, self, self.action_data))
+            return True if not isinstance(can, bool) else can
 
         can = ref.on_action(ActionEvent.create(
             DemoActionTypes.COLLISION, self, self.action_data))
-        return isinstance(can, bool) and can
+        return False if not isinstance(can, bool) else can
 
     def on_update_control(self, dt: float, collision_tiles: list[ComponentObject]):
         speed = dt * 200
         move = Vec()
 
         if self.force_timer > 0:
-            move += self.force * speed
+            move += self.force * dt
             self.force_timer -= 100 * dt
             self.position += move
         else:

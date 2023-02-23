@@ -28,7 +28,7 @@ class Floor(Tileset):
         if frame == 0 or frame == 3:
             char: Character = action.object
             char.damage(10)
-            char.repulce_oposite(self.position, self.size, 4, 10)
+            char.repulce_oposite(self.position, self.size, 800, 10)
 
         return True
 
