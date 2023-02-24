@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['dungeon.py'],
+    ['main.py'],
     pathex=[],
     binaries=[],
     datas=[],
