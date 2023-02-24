@@ -320,13 +320,13 @@ class Dungeon(Win):
         self.loading.on_draw(dt)
 
     def on_load(self) -> None:
-        if not os.path.exists(Demo.ASSETS_DIR):
+        if not os.path.exists(Dungeon.ASSETS_DIR):
             self.no_assets = True
             return
         
-        files = os.listdir(Demo.ASSETS_DIR)
+        files = os.listdir(Dungeon.ASSETS_DIR)
         for filename in files:
-            texture_path = os.path.abspath(Demo.ASSETS_DIR + filename)
+            texture_path = os.path.abspath(Dungeon.ASSETS_DIR + filename)
             texture_id = self.load_image(texture_path)
 
             self.texture_atlas.add(filename, texture_id)
@@ -343,7 +343,7 @@ class Dungeon(Win):
 
 
 def main(args):
-    Dungeon().start(1680, 1050, "Demo - BTP v{}".format(BTP.BTP.__version__), False)
+    Dungeon().start(1680, 1050, "Dungeon - BTP v{}".format(BTP.BTP.__version__), False)
     return 0
 
 
