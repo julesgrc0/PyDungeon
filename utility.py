@@ -13,7 +13,7 @@ SCALE = 6
 TILE_SIZE = 16 * SCALE
 
 
-class DemoActionTypes:
+class DungeonActionTypes:
     COLLISION = "collision"
     COLLISION_IN = "collision_in"
     AROUND = "around"
@@ -21,17 +21,17 @@ class DemoActionTypes:
 
     @staticmethod
     def all():
-        return [DemoActionTypes.COLLISION, DemoActionTypes.COLLISION_IN, DemoActionTypes.AROUND, DemoActionTypes.COLLECT]
+        return [DungeonActionTypes.COLLISION, DungeonActionTypes.COLLISION_IN, DungeonActionTypes.AROUND, DungeonActionTypes.COLLECT]
 
 
-class DemoRoleTypes:
+class DungeonRoleTypes:
     NONE = "none"
     PLAYER = "player"
     MONSTER = "monster"
 
 @dataclass
-class DemoActionData:
-    role: DemoRoleTypes = field(default=DemoRoleTypes.NONE)
+class DungeonActionData:
+    role: DungeonRoleTypes = field(default=DungeonRoleTypes.NONE)
 
 
 class Keyboard:

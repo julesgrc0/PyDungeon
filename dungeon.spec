@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['demo.py'],
+    ['dungeon.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -26,7 +26,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='demo',
+    name='dungeon',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

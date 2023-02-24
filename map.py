@@ -3,7 +3,7 @@ from BTP.util import *
 from BTP.gui import *
 
 from core import *
-from utility import TILE_SIZE, WHITE, BLACK, Stats, Keyboard, vec_floor, from_vec_str, is_in_view, vec_ceil, DemoActionTypes
+from utility import TILE_SIZE, WHITE, BLACK, Stats, Keyboard, vec_floor, from_vec_str, is_in_view, vec_ceil, DungeonActionTypes
 
 import threading
 import copy

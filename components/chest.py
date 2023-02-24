@@ -1,6 +1,6 @@
 import random
 from core import *
-from utility import DemoActionData, DemoActionTypes, DemoRoleTypes, Keyboard, draw_key_interract
+from utility import DungeonActionData, DungeonActionTypes, DungeonRoleTypes, Keyboard, draw_key_interract
 
 class Chest(Tileset):
 
@@ -27,8 +27,8 @@ class Chest(Tileset):
         if self.state != "closed":
             return
         
-        if action.name == DemoActionTypes.AROUND and isinstance(action.data, DemoActionData):
-            if action.data.role == DemoRoleTypes.PLAYER:
+        if action.name == DungeonActionTypes.AROUND and isinstance(action.data, DungeonActionData):
+            if action.data.role == DungeonRoleTypes.PLAYER:
                 self.interact = 20
                 self.player_ref = action.object
         
@@ -41,8 +41,8 @@ class Chest(Tileset):
             case "closed":
                 return self.texture.textures[0]
             case "animation":
-                if self.accept_action(DemoActionTypes.AROUND):
-                    self.accepted_actions.remove(DemoActionTypes.AROUND)
+                if self.accept_action(DungeonActionTypes.AROUND):
+                    self.accepted_actions.remove(DungeonActionTypes.AROUND)
 
                 frame = super().get_frame(dt)
                 if int(self.animation_index)%len(self.texture.textures) == 0:
@@ -81,7 +81,7 @@ class Chest(Tileset):
             self.state = "animation"
             self.animation_index = 1
             if self.player_ref is not None:
-                self.player_ref.on_action(ActionEvent.create(DemoActionTypes.COLLECT, self, DemoActionData()))
+                self.player_ref.on_action(ActionEvent.create(DungeonActionTypes.COLLECT, self, DungeonActionData()))
         
 
 

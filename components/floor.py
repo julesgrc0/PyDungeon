@@ -1,5 +1,5 @@
 from core import *
-from utility import DemoActionTypes, DemoActionData, DemoRoleTypes
+from utility import DungeonActionTypes, DungeonActionData, DungeonRoleTypes
 
 from components.character import Character
 
@@ -15,13 +15,13 @@ class Floor(Tileset):
             self.animation_speed = 1
 
     def trap_damage(self, action: ActionEvent):
-        if action.name != DemoActionTypes.COLLISION and action.name != DemoActionTypes.COLLISION_IN:
+        if action.name != DungeonActionTypes.COLLISION and action.name != DungeonActionTypes.COLLISION_IN:
             return
 
-        if not isinstance(action.object, Character) or not isinstance(action.data, DemoActionData):
+        if not isinstance(action.object, Character) or not isinstance(action.data, DungeonActionData):
             return
 
-        if action.data.role != DemoRoleTypes.PLAYER:
+        if action.data.role != DungeonRoleTypes.PLAYER:
             return
 
         frame = int(self.animation_index) % len(self.texture.textures)

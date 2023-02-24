@@ -1,7 +1,7 @@
 from components.chest import Chest
 from components.weapon import Weapon
 from core import *
-from utility import TILE_SIZE, DemoActionData, DemoActionTypes, DemoRoleTypes, Keyboard, rect_rect_center, center_rect, WHITE
+from utility import TILE_SIZE, DungeonActionData, DungeonActionTypes, DungeonRoleTypes, Keyboard, rect_rect_center, center_rect, WHITE
 
 
 class Character(ComponentObject):
@@ -19,7 +19,7 @@ class Character(ComponentObject):
         self.force = Vec()
         self.force_timer = 0
 
-        self.action_data = DemoActionData()
+        self.action_data = DungeonActionData()
         self.life = 100
 
         self.atlas: Optional[ObjectBaseAtlas] = None
@@ -129,7 +129,7 @@ class Character(ComponentObject):
         return self.life > 0
 
     def on_action(self, action: ActionEvent) -> Any:
-        if action.name == DemoActionTypes.COLLECT:
+        if action.name == DungeonActionTypes.COLLECT:
             if isinstance(action.object, Chest) and self.atlas is not None:
                 items = action.object.get_items(self.atlas)
                 self.inventory += items
@@ -141,20 +141,20 @@ class Character(ComponentObject):
             if self.btp.col_rect_rect(tile.position, tile.size, self.position + move, self.size):
                 ref = tile
                 continue
-            elif tile.accept_action(DemoActionTypes.AROUND):
+            elif tile.accept_action(DungeonActionTypes.AROUND):
                 tile.on_action(ActionEvent.create(
-                    DemoActionTypes.AROUND, self, self.action_data))
+                    DungeonActionTypes.AROUND, self, self.action_data))
 
         if ref is None:
             return True
 
         if self.btp.col_rect_rect(ref.position, ref.size, self.position, self.size):
             can = ref.on_action(ActionEvent.create(
-                DemoActionTypes.COLLISION_IN, self, self.action_data))
+                DungeonActionTypes.COLLISION_IN, self, self.action_data))
             return True if not isinstance(can, bool) else can
 
         can = ref.on_action(ActionEvent.create(
-            DemoActionTypes.COLLISION, self, self.action_data))
+            DungeonActionTypes.COLLISION, self, self.action_data))
         return False if not isinstance(can, bool) else can
 
     def on_update_control(self, dt: float, collision_tiles: list[ComponentObject]):
@@ -200,7 +200,7 @@ class Character(ComponentObject):
         return 0
 
     def on_draw_ui(self, dt: float):
-        if self.action_data.role != DemoRoleTypes.PLAYER:
+        if self.action_data.role != DungeonRoleTypes.PLAYER:
             return
 
         if self.btp.is_key_pressed(Keyboard.SPACE):

@@ -2,9 +2,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Run Demo",
+            "label": "Run main",
             "type": "shell",
-            "command": "python demo.py",
+            "command": "python main.py",
             "problemMatcher": [],
             "group": {
                 "kind": "build",

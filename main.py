@@ -160,7 +160,7 @@ class Game:
         characters: list[Character] = self.atlas.from_instance(Character)
         self.character = random.choice(characters).copy()
         self.character.atlas = self.atlas
-        self.character.action_data = DemoActionData(role=DemoRoleTypes.PLAYER)
+        self.character.action_data = DungeonActionData(role=DungeonRoleTypes.PLAYER)
         
 
     def update_hearts(self, position : Vec):
@@ -223,7 +223,7 @@ class Game:
         return self.btp.is_key_pressed(Keyboard.ENTER) or not self.character.is_alive()
 
 
-class Demo(Win):
+class Dungeon(Win):
     ASSETS_DIR = "./assets/"
 
     def __init__(self) -> None:
@@ -260,7 +260,7 @@ class Demo(Win):
         for obj in self.objects_atlas.objects:
             if isinstance(obj, ComponentObject):
                 obj.on_ready(self)
-                obj.accepted_actions = DemoActionTypes.all()
+                obj.accepted_actions = DungeonActionTypes.all()
 
         self.camera_follow_rect(
             Vec(),
@@ -343,7 +343,7 @@ class Demo(Win):
 
 
 def main(args):
-    Demo().start(1680, 1050, "Demo - BTP v{}".format(BTP.BTP.__version__), False)
+    Dungeon().start(1680, 1050, "Demo - BTP v{}".format(BTP.BTP.__version__), False)
     return 0
 
 
