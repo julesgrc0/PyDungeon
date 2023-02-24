@@ -136,7 +136,8 @@ class Game:
 
         characters: list[Character] = self.atlas.from_instance(Character)
         self.character = self.atlas.copy(Character, random.choice(characters).name)
-        self.character.action_data = DemoActionData(role="player")
+        self.character.atlas = self.atlas
+        self.character.action_data = DemoActionData(role=DemoRoleTypes.PLAYER)
 
     def on_draw(self, dt: float):
 
@@ -167,6 +168,7 @@ class Game:
         self.stats["Key"] = self.last_key
         self.stats["View chunk"] = len(self.map.view_chunks)
         self.stats["View tile"] = self.map.view_tile_count
+        self.stats["Player life"] = self.character.life
 
         self.stats.on_draw(Vec(), 20, BLACK)
 
@@ -206,6 +208,7 @@ class Demo(Win):
         for obj in self.objects_atlas.objects:
             if isinstance(obj, ComponentObject):
                 obj.on_ready(self)
+                obj.accepted_actions = DemoActionTypes.all()
 
         self.camera_follow_rect(
             Vec(),

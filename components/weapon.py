@@ -1,7 +1,7 @@
 from core import *
 
 
-class Weapon(ComponentObject):
+class Weapon(CollectableItem):
 
     def __init__(self, texture: Texture | AnimatedTexture) -> None:
         super().__init__(texture)

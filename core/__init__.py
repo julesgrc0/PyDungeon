@@ -14,6 +14,12 @@ class SpecialTileset(ComponentObject):
         super().__init__(texture)
 
 
+class CollectableItem(ComponentObject):
+
+    def __init__(self, texture: Texture | AnimatedTexture) -> None:
+        super().__init__(texture)
+
+
 class UI(ComponentObject):
 
     def __init__(self, texture: Texture | AnimatedTexture) -> None:

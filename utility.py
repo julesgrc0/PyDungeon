@@ -1,3 +1,4 @@
+from typing import Self
 from BTP.BTP import Color, Vec, Win
 
 from dataclasses import dataclass, field
@@ -14,10 +15,23 @@ TILE_SIZE = 16 * SCALE
 class DemoActionTypes:
     COLLISION = "collision"
     COLLISION_IN = "collision_in"
+    AROUND = "around"
+    COLLECT = "collect"
+
+    @staticmethod
+    def all():
+        return [DemoActionTypes.COLLISION, DemoActionTypes.COLLISION_IN, DemoActionTypes.AROUND, DemoActionTypes.COLLECT]
+
+
+class DemoRoleTypes:
+    NONE = "none"
+    PLAYER = "player"
+    MONSTER = "monster"
 
 @dataclass
 class DemoActionData:
-    role: str = field(default="none")    
+    role: DemoRoleTypes = field(default=DemoRoleTypes.NONE)
+
 
 class Keyboard:
     LEFT = 263
@@ -34,13 +48,24 @@ BLACK = Color(20, 20, 20, 255)
 WHITE = Color(250, 249, 246, 255)
 
 
+def draw_key_interract(btp: Win, key: str, position: Vec):
+    tsize = btp.text_size(key, 20)
+    size = tsize + Vec(10)
+    btp.draw_rectround(position, size, 0.1, BLACK)
+
+    center = (size-tsize)/2
+    btp.draw_text(key, position + center, 20, WHITE)
+
+
 def rotate_around(pos: Vec, origin: Vec,  deg: float) -> Vec:
     theta = (deg*math.pi)/180
 
-    newx = math.cos(theta) * (pos.x-origin.x) - math.sin(theta) * (pos.y-origin.y) + origin.x
-    newy = math.sin(theta) * (pos.x-origin.x) + math.cos(theta) * (pos.y-origin.y) + origin.y
+    newx = math.cos(theta) * (pos.x-origin.x) - \
+        math.sin(theta) * (pos.y-origin.y) + origin.x
+    newy = math.sin(theta) * (pos.x-origin.x) + \
+        math.cos(theta) * (pos.y-origin.y) + origin.y
 
-    return Vec(newx,newy)
+    return Vec(newx, newy)
 
 
 def rect_rect_distance(p1: Vec, s1: Vec, p2: Vec, s2: Vec):
@@ -51,9 +76,9 @@ def rect_rect_distance(p1: Vec, s1: Vec, p2: Vec, s2: Vec):
 
 
 def rect_rect_center(p1: Vec, s1: Vec, p2: Vec, s2: Vec):
-  center1 = Vec(p1.x + s1.x/2, p1.y + s1.y/2)
-  center2 = Vec(p2.x + s2.x/2, p2.y + s2.y/2)
-  return Vec(center2.x - center1.x, center2.y - center1.y)
+    center1 = Vec(p1.x + s1.x/2, p1.y + s1.y/2)
+    center2 = Vec(p2.x + s2.x/2, p2.y + s2.y/2)
+    return Vec(center2.x - center1.x, center2.y - center1.y)
 
 
 def from_vec_str(s: str) -> Vec:

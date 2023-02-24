@@ -1,5 +1,7 @@
+import math
+from components.chest import Chest
 from core import *
-from utility import DemoActionData, DemoActionTypes, Keyboard, rect_rect_center
+from utility import DemoActionData, DemoActionTypes, DemoRoleTypes, Keyboard, rect_rect_center
 
 class Character(ComponentObject):
 
@@ -18,6 +20,10 @@ class Character(ComponentObject):
 
         self.action_data = DemoActionData()
         self.life = 100
+
+        self.atlas: Optional[ObjectBaseAtlas] = None
+        self.inventory: list[CollectableItem] = []
+
 
     @staticmethod
     def is_grouped() -> bool:
@@ -65,21 +71,29 @@ class Character(ComponentObject):
     def is_alive(self):
         return self.life > 0
 
+    def on_action(self, action: ActionEvent) -> Any:
+        if action.name == DemoActionTypes.COLLECT:
+            if isinstance(action.object, Chest) and self.atlas is not None:
+                items = action.object.get_items(self.atlas)
+                self.inventory += items
+
     def can_move(self, move: Vec, collision_tiles: list[ComponentObject]) -> bool:
         ref: Optional[ObjectBase] = None
         for tile in collision_tiles:
             if self.btp.col_rect_rect(tile.position, tile.size, self.position + move, self.size):
                 ref = tile
-                break
-        else:
+                continue
+            elif tile.accept_action(DemoActionTypes.AROUND):
+                tile.on_action(ActionEvent.create(DemoActionTypes.AROUND, self, self.action_data))
+        
+        if ref is None:
             return True
-
-        if ref is not None and self.btp.col_rect_rect(ref.position, ref.size, self.position, self.size):
+        
+        if self.btp.col_rect_rect(ref.position, ref.size, self.position, self.size):
             can = ref.on_action(ActionEvent.create(DemoActionTypes.COLLISION_IN, self, self.action_data))
             return True if not isinstance(can, bool) else can
 
-        can = ref.on_action(ActionEvent.create(
-            DemoActionTypes.COLLISION, self, self.action_data))
+        can = ref.on_action(ActionEvent.create(DemoActionTypes.COLLISION, self, self.action_data))
         return False if not isinstance(can, bool) else can
 
     def on_update_control(self, dt: float, collision_tiles: list[ComponentObject]):
@@ -122,6 +136,13 @@ class Character(ComponentObject):
             self.animation_index += dt * 8
             return frames[frame-1]
         return 0
+
+    def on_draw_ui(self, dt: float):
+        if self.action_data.role != DemoRoleTypes.PLAYER:
+            return
+        
+        # TODO: draw the player inventory
+        
 
     def on_draw(self, dt: float):
         self.btp.draw_image(self.get_frame(

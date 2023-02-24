@@ -1,5 +1,5 @@
 from core import *
-from utility import DemoActionTypes, DemoActionData
+from utility import DemoActionTypes, DemoActionData, DemoRoleTypes
 
 from components.character import Character
 
@@ -21,7 +21,7 @@ class Floor(Tileset):
         if not isinstance(action.object, Character) or not isinstance(action.data, DemoActionData):
             return
 
-        if action.data.role != "player":
+        if action.data.role != DemoRoleTypes.PLAYER:
             return
 
         frame = int(self.animation_index) % len(self.texture.textures)

@@ -162,6 +162,10 @@ class ActionObject(ObjectBase):
 
     def __init__(self, texture: Texture | AnimatedTexture) -> None:
         super().__init__(texture)
+        self.accepted_actions: list[str] = []
+
+    def accept_action(self, name):
+        return name in self.accepted_actions
 
     def on_action(self, action: ActionEvent):
         pass
