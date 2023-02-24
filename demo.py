@@ -140,6 +140,10 @@ class Game:
 
         self.character: Character
         
+        self.heart_value = 20
+        self.max_life = 100
+        self.hearts_display: list[Optional[UI]] = [ None for i in range(int(self.max_life/self.heart_value))]
+        self.last_life = 0
 
     def close_game(self):
         self.map.stop_update_thread()
@@ -157,18 +161,36 @@ class Game:
         self.character = random.choice(characters).copy()
         self.character.atlas = self.atlas
         self.character.action_data = DemoActionData(role=DemoRoleTypes.PLAYER)
+        
+
+    def update_hearts(self, position : Vec):
+        parts = split_num(self.character.life, self.heart_value)
+        
+        for index in range(int(self.max_life/self.heart_value)):
+            if index >= len(parts):
+                self.hearts_display[index] = self.atlas.copy(UI, "ui_heart_empty")
+            elif parts[index] == self.heart_value:
+                self.hearts_display[index] = self.atlas.copy(UI, "ui_heart_full")            
+            else:
+                self.hearts_display[index] = self.atlas.copy(UI, "ui_heart_half")
+
+            self.hearts_display[index].size /=3
+            self.hearts_display[index].position = position + Vec(self.hearts_display[index].size.x * index, 0)
 
     def on_draw(self, dt: float):
         self.btp.camera_follow_rect(
             self.character.position,
             self.character.size,
-            0.0, 0.0, 0.0
+            0.0, # min distance 
+            0.0, # speed
+            0.0 # min speed
         )
 
         self.map.on_draw(dt)
         self.character.on_update_control(dt, self.map.get_collision_tiles())
         self.character.on_draw(dt)
-        
+
+
         #self.angle += dt * 100
         # pos = self.character.position + Vec(self.character.size.x/4, self.character.size.y/4)
         # size = Vec(50)
@@ -190,6 +212,14 @@ class Game:
         
         self.character.on_draw_ui(dt)
         
+        if self.last_life != self.character.life:
+            self.last_life = self.character.life
+            self.update_hearts(self.btp.get_render_size() * Vec(0.1, 0.9))
+        
+        for heart in self.hearts_display:
+            if heart is not None:
+                heart.on_draw(dt)
+
         return self.btp.is_key_pressed(Keyboard.ENTER) or not self.character.is_alive()
 
 

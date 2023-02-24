@@ -118,6 +118,16 @@ class Stats:
         self.data.clear()
 
 
+def split_num(number, parts):
+    result = []
+    while number > 0:
+        if number < parts:
+            result.append(number)
+            break
+        result.append(parts)
+        number -= parts
+    return result
+
 
 def is_in_view(btp: Win, position: Vec, size: Vec):
     return btp.col_rect_rect(btp.camera_pos - btp.camera_offset, btp.get_render_size(), position, size)
