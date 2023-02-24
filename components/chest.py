@@ -32,8 +32,7 @@ class Chest(Tileset):
                 self.interact = 20
                 self.player_ref = action.object
         
-            
-
+        
     def get_frame(self, dt: float) -> int:
         if not self.valid:
             return
@@ -59,9 +58,10 @@ class Chest(Tileset):
         self.collect = True
         collectable = atlas.from_instance(CollectableItem)
         items = []
-
-        for i in range(random.randint(0, 5)):
-            items.append(copy.copy(random.choice(collectable)))
+    
+        for i in range(random.randint(1, 6)):
+            item: CollectableItem = random.choice(collectable)
+            items.append(item.copy())
 
         return items
         

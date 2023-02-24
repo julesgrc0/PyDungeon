@@ -1,3 +1,4 @@
+import random
 from typing import Self
 from BTP.BTP import Color, Vec, Win
 
@@ -56,6 +57,8 @@ def draw_key_interract(btp: Win, key: str, position: Vec):
     center = (size-tsize)/2
     btp.draw_text(key, position + center, 20, WHITE)
 
+def center_rect(p1: Vec, s1: Vec, s2: Vec):
+    return p1 + (s1-s2)/2
 
 def rotate_around(pos: Vec, origin: Vec,  deg: float) -> Vec:
     theta = (deg*math.pi)/180
@@ -113,6 +116,7 @@ class Stats:
             text += "{}: {}\n".format(key, val)
         self.btp.draw_text(text, position, size, color)
         self.data.clear()
+
 
 
 def is_in_view(btp: Win, position: Vec, size: Vec):

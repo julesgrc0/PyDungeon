@@ -24,6 +24,25 @@ class Loading:
         self.btp = btp
         self.loading = 0
 
+    def center_text(self, text: str, size: int):
+        tsize = self.btp.text_size(text, size)
+        return (self.btp.get_render_size() - tsize)/2, tsize
+
+    def on_draw_error(self, error: str):
+        self.btp.draw_rect(Vec(), self.btp.get_render_size(), WHITE)
+
+        pos_err, size_err = self.center_text(error, 40)
+        pos_err.y -= 50
+        self.btp.draw_text(error, pos_err, 40, BLACK)
+
+        info = "Please restart your game, or update it!"
+        pos_inf, size_inf = self.center_text(info, 20)
+        pos_inf.y += 30
+        self.btp.draw_text(info,pos_inf, 20, BLACK)
+
+        self.btp.draw_line(pos_err + Vec(0, 60), pos_err + Vec(size_err.x, 60), BLACK)
+        
+
     def on_draw(self, dt):
         self.btp.draw_rect(Vec(), self.btp.get_render_size(), WHITE)
 
@@ -33,8 +52,7 @@ class Loading:
         pos.y -= 20
 
         self.btp.draw_text(text, pos, 40, BLACK)
-        self.btp.draw_rect(Vec(pos.x, pos.y + 60),
-                           Vec(tsize.x * (self.loading/100), 20), BLACK)
+        self.btp.draw_rect(Vec(pos.x, pos.y + 60),Vec(tsize.x * (self.loading/100), 20), BLACK)
 
         self.loading += dt * 30
         if self.loading >= 100:
@@ -121,6 +139,7 @@ class Game:
         self.map = Map(self.btp, self.atlas)
 
         self.character: Character
+        
 
     def close_game(self):
         self.map.stop_update_thread()
@@ -135,12 +154,11 @@ class Game:
         self.map.on_ready()
 
         characters: list[Character] = self.atlas.from_instance(Character)
-        self.character = self.atlas.copy(Character, random.choice(characters).name)
+        self.character = random.choice(characters).copy()
         self.character.atlas = self.atlas
         self.character.action_data = DemoActionData(role=DemoRoleTypes.PLAYER)
 
     def on_draw(self, dt: float):
-
         self.btp.camera_follow_rect(
             self.character.position,
             self.character.size,
@@ -150,15 +168,13 @@ class Game:
         self.map.on_draw(dt)
         self.character.on_update_control(dt, self.map.get_collision_tiles())
         self.character.on_draw(dt)
-
+        
         #self.angle += dt * 100
         # pos = self.character.position + Vec(self.character.size.x/4, self.character.size.y/4)
         # size = Vec(50)
         # newp = rotate_around(pos, pos+size/2, self.angle)
         # self.btp.draw_rectrot(newp, size, self.angle, Color(255, 0, 0, 255))
-
-
-        
+  
     def on_draw_ui(self, dt: float) -> bool:
         key = self.btp.get_key_code()
         if key != 0:
@@ -171,7 +187,9 @@ class Game:
         self.stats["Player life"] = self.character.life
 
         self.stats.on_draw(Vec(), 20, BLACK)
-
+        
+        self.character.on_draw_ui(dt)
+        
         return self.btp.is_key_pressed(Keyboard.ENTER) or not self.character.is_alive()
 
 
@@ -203,8 +221,12 @@ class Demo(Win):
         self.map_creator = MapCreator(self, self.objects_atlas)
 
         self.state = GameState.MENU
+        self.no_assets = False
 
     def on_ready(self) -> None:
+        if self.no_assets:
+            return
+        
         for obj in self.objects_atlas.objects:
             if isinstance(obj, ComponentObject):
                 obj.on_ready(self)
@@ -236,6 +258,10 @@ class Demo(Win):
         if self.is_loading():
             return
 
+        if self.no_assets:
+            self.loading.on_draw_error("Assets not found")
+            return
+
         match self.state:
             case GameState.MENU:
                 self.state = self.menu.on_draw_ui(dt)
@@ -264,23 +290,25 @@ class Demo(Win):
         self.loading.on_draw(dt)
 
     def on_load(self) -> None:
-        try:
-            files = os.listdir(Demo.ASSETS_DIR)
-            for filename in files:
-                texture_path = os.path.abspath(Demo.ASSETS_DIR + filename)
-                texture_id = self.load_image(texture_path)
+        if not os.path.exists(Demo.ASSETS_DIR):
+            self.no_assets = True
+            return
+        
+        files = os.listdir(Demo.ASSETS_DIR)
+        for filename in files:
+            texture_path = os.path.abspath(Demo.ASSETS_DIR + filename)
+            texture_id = self.load_image(texture_path)
 
-                self.texture_atlas.add(filename, texture_id)
+            self.texture_atlas.add(filename, texture_id)
 
-            for type in self.object_base:
-                self.objects_atlas.register(type)
+        for type in self.object_base:
+            self.objects_atlas.register(type)
 
-            for texture in self.texture_atlas.textures:
-                self.objects_atlas.add(texture)
+        for texture in self.texture_atlas.textures:
+            self.objects_atlas.add(texture)
 
-            self.menu.on_load()
-        except Exception as e:
-            print(e)
+        self.menu.on_load()
+        
         # time.sleep(3)
 
 

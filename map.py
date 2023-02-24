@@ -242,11 +242,11 @@ class MapCreator(MapBase):
     def on_ready(self):
         tile_size = TILE_SIZE/2
 
-        tile_types = self.atlas.from_instance(Tileset)
+        tile_types:list[Tileset] = self.atlas.from_instance(Tileset)
         x = 0.5
         y = 5
-        for t in tile_types:
-            cpt = copy.copy(t)
+        for tile in tile_types:
+            cpt = tile.copy()
             cpt.size /= 2
             cpt.position = Vec(x, y) * tile_size
 
@@ -260,8 +260,8 @@ class MapCreator(MapBase):
         y = 5 * tile_size
         tile_types = self.atlas.from_instance(SpecialTileset)
 
-        for t in tile_types:
-            cpt = copy.copy(t)
+        for tile in tile_types:
+            cpt = tile.copy()
             cpt.position = Vec(x, y)
             cpt.size /= 2
             self.selectable_tiles_special.append(cpt)
@@ -335,7 +335,7 @@ class MapCreator(MapBase):
                 ) + self.btp.camera_pos
 
                 if self.selected is not None:
-                    cp = copy.copy(self.selected)
+                    cp = self.selected.copy()
                     cp.position = pos
                     cp.flip = Vec(self.flip.x, self.flip.y)
                     cp.size *= 2

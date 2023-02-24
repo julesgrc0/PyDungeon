@@ -89,6 +89,9 @@ class ObjectBase:
     @staticmethod
     def check_name(name: str) -> bool:
         return True
+    
+    def copy(self):
+        return copy.copy(self)
 
 
 class ObjectBaseAtlas:
@@ -131,7 +134,7 @@ class ObjectBaseAtlas:
     def copy(self, classbase, name) -> None | ObjectBase:
         for obj in self.objects:
             if isinstance(obj, classbase) and obj.name == name:
-                return copy.copy(obj)
+                return obj.copy()
         return None
 
     def from_instance(self, classbase) -> list[Any]:
@@ -169,6 +172,11 @@ class ActionObject(ObjectBase):
 
     def on_action(self, action: ActionEvent):
         pass
+
+    def copy(self):
+        copy_obj = super().copy()
+        copy_obj.accepted_actions = copy.copy(self.accepted_actions)
+        return copy_obj
 
 
 class ComponentObject(ActionObject, Component):

@@ -1,7 +1,8 @@
-import math
 from components.chest import Chest
+from components.weapon import Weapon
 from core import *
-from utility import DemoActionData, DemoActionTypes, DemoRoleTypes, Keyboard, rect_rect_center
+from utility import TILE_SIZE, DemoActionData, DemoActionTypes, DemoRoleTypes, Keyboard, rect_rect_center, center_rect, WHITE
+
 
 class Character(ComponentObject):
 
@@ -22,8 +23,10 @@ class Character(ComponentObject):
         self.life = 100
 
         self.atlas: Optional[ObjectBaseAtlas] = None
-        self.inventory: list[CollectableItem] = []
 
+        self.inventory: list[CollectableItem] = []
+        self.inventory_open: bool = False
+        self.inventory_grid: list[list] = []
 
     @staticmethod
     def is_grouped() -> bool:
@@ -36,6 +39,12 @@ class Character(ComponentObject):
     @staticmethod
     def check_name(name: str):
         return name.endswith('idle') or name.endswith('run') or name.endswith('hit')
+
+    def copy(self):
+        copy_obj: Character = super().copy()
+        copy_obj.inventory = copy.copy(copy_obj.inventory)
+        copy_obj.inventory_grid = copy.copy(copy_obj.inventory_grid)
+        return copy_obj
 
     def damage(self, value: float):
         self.life -= value
@@ -68,6 +77,54 @@ class Character(ComponentObject):
                 elif "run" in last:
                     self.run.append(self.texture.textures[index])
 
+        margin = 10
+        posix = (self.btp.get_render_size().x - ((TILE_SIZE + margin) * 8))/2
+
+        posx = posix
+        posy = TILE_SIZE * 2
+
+        x = 0
+        for i in range(0, 32):
+            self.inventory_grid.append(
+                [Vec(posx, posy), Vec(TILE_SIZE), None, 0])
+            posx += TILE_SIZE + margin
+            x += 1
+            if x >= 8:
+                x = 0
+                posx = posix
+                posy += TILE_SIZE + margin
+
+    def update_inventory(self):
+        unique: list[list] = []
+
+        for it in self.inventory:
+            for uit in unique:
+                if uit[0].name == it.name:
+                    uit[1] += 1
+                    break
+            else:
+                unique.append([it.copy(), 1])
+        
+        
+        i = 0
+        it_margin = TILE_SIZE - 20
+        for it, count in unique:
+            if i >= len(self.inventory_grid):
+                break
+
+
+            if isinstance(it, Weapon):
+                it.size.x = (it.size.x*it_margin) / it.size.y
+                it.size.y = it_margin
+                it.position = center_rect(self.inventory_grid[i][0], Vec(TILE_SIZE), it.size)
+            else:
+                it.size /= 2
+                it.position = center_rect(self.inventory_grid[i][0], Vec(TILE_SIZE), it.size)
+
+            self.inventory_grid[i][2] = it
+            self.inventory_grid[i][3] = count
+            i += 1
+
     def is_alive(self):
         return self.life > 0
 
@@ -76,6 +133,7 @@ class Character(ComponentObject):
             if isinstance(action.object, Chest) and self.atlas is not None:
                 items = action.object.get_items(self.atlas)
                 self.inventory += items
+                self.update_inventory()
 
     def can_move(self, move: Vec, collision_tiles: list[ComponentObject]) -> bool:
         ref: Optional[ObjectBase] = None
@@ -84,16 +142,19 @@ class Character(ComponentObject):
                 ref = tile
                 continue
             elif tile.accept_action(DemoActionTypes.AROUND):
-                tile.on_action(ActionEvent.create(DemoActionTypes.AROUND, self, self.action_data))
-        
+                tile.on_action(ActionEvent.create(
+                    DemoActionTypes.AROUND, self, self.action_data))
+
         if ref is None:
             return True
-        
+
         if self.btp.col_rect_rect(ref.position, ref.size, self.position, self.size):
-            can = ref.on_action(ActionEvent.create(DemoActionTypes.COLLISION_IN, self, self.action_data))
+            can = ref.on_action(ActionEvent.create(
+                DemoActionTypes.COLLISION_IN, self, self.action_data))
             return True if not isinstance(can, bool) else can
 
-        can = ref.on_action(ActionEvent.create(DemoActionTypes.COLLISION, self, self.action_data))
+        can = ref.on_action(ActionEvent.create(
+            DemoActionTypes.COLLISION, self, self.action_data))
         return False if not isinstance(can, bool) else can
 
     def on_update_control(self, dt: float, collision_tiles: list[ComponentObject]):
@@ -128,6 +189,7 @@ class Character(ComponentObject):
             if self.can_move(move, collision_tiles):  # if collsion in
                 if not move.is_zero():
                     self.position += move
+                    self.inventory_open = False
 
     def get_frame(self, dt: float):
         frames = getattr(self, self.state)
@@ -140,9 +202,23 @@ class Character(ComponentObject):
     def on_draw_ui(self, dt: float):
         if self.action_data.role != DemoRoleTypes.PLAYER:
             return
-        
-        # TODO: draw the player inventory
-        
+
+        if self.btp.is_key_pressed(Keyboard.SPACE):
+            self.inventory_open = not self.inventory_open
+
+        if not self.inventory_open:
+            return
+
+        self.btp.draw_rect(Vec(), self.btp.get_render_size(),
+                           Color(0, 0, 0, 100))
+
+        for pos, size, item, count in self.inventory_grid:
+            self.btp.draw_rectline(pos, size, WHITE)
+            if item is not None:
+                item.on_draw(dt)
+
+            if count > 1:
+                self.btp.draw_text("x"+str(count), pos + Vec(5), 20, WHITE)
 
     def on_draw(self, dt: float):
         self.btp.draw_image(self.get_frame(
