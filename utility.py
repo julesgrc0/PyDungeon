@@ -13,6 +13,12 @@ SCALE = 6
 TILE_SIZE = 16 * SCALE
 
 
+class DungeonScreens:
+    NONE = "none"
+    MENU = "menu"
+    GAME = "game"
+    MAP_CREATOR = "creator"
+
 class DungeonActionTypes:
     COLLISION = "collision"
     COLLISION_IN = "collision_in"

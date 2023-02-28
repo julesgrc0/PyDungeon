@@ -203,6 +203,9 @@ class Character(ComponentObject):
         if self.action_data.role != DungeonRoleTypes.PLAYER:
             return
 
+        
+
+
         if self.btp.is_key_pressed(Keyboard.SPACE):
             self.inventory_open = not self.inventory_open
 

@@ -7,3 +7,4 @@ from components.coin import Coin
 from components.flask import Flask
 from components.doors import Doors
 from components.weapon import Weapon
+from components.hearts import Hearts
