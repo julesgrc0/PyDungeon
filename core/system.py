@@ -91,7 +91,23 @@ class ObjectBase:
         return True
     
     def copy(self):
-        return copy.copy(self)
+        classbase = type(self)
+        cp = classbase(copy.deepcopy(self.texture))
+
+        for attr_name in dir(self):
+            if attr_name.startswith('_'):
+                continue
+
+            attr = getattr(self, attr_name, None)
+            if attr is None or callable(attr):
+                continue
+            
+            try:
+                setattr(cp, attr_name, copy.copy(attr))
+            except:
+                setattr(cp, attr_name, attr)
+
+        return cp
 
 
 class ObjectBaseAtlas:

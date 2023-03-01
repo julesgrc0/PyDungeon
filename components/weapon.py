@@ -13,4 +13,4 @@ class Weapon(CollectableItem):
     def on_ready(self, btp: Win) -> None:
         super().on_ready(btp)
 
-        self.size *= 1.4
+        self.size *= 0.6

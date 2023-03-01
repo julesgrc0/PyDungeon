@@ -28,9 +28,9 @@ class Character(ComponentObject):
 
         self.inventory: list[CollectableItem] = []
         self.inventory_open: bool = False
-        self.inventory_grid: list[list] = []
+        self.inventory_grid: list[list] = [[None, 0] for i in range(0, 32)]
 
-        self.inventory_selection: int = -1
+        self.inventory_selection: Optional[CollectableItem] = None
         self.inventory_item_angle = 0
         self.inventory_item_angle_dir = True
 
@@ -46,11 +46,11 @@ class Character(ComponentObject):
     def check_name(name: str):
         return name.endswith('idle') or name.endswith('run') or name.endswith('hit')
 
-    def copy(self):
-        copy_obj: Character = super().copy()
-        copy_obj.inventory = copy.copy(copy_obj.inventory)
-        copy_obj.inventory_grid = copy.copy(copy_obj.inventory_grid)
-        return copy_obj
+    # def copy(self):
+    #     copy_obj: Character = super().copy()
+    #     copy_obj.inventory = copy.copy(copy_obj.inventory)
+    #     copy_obj.inventory_grid = copy.copy(copy_obj.inventory_grid)
+    #     return copy_obj
 
     def damage(self, value: float):
         self.life -= value
@@ -83,54 +83,59 @@ class Character(ComponentObject):
                 elif "run" in last:
                     self.run.append(self.texture.textures[index])
 
+    def draw_inventory(self):
         margin = 10
-        posix = (self.btp.get_render_size().x - ((TILE_SIZE + margin) * 8))/2
+        base_x = (self.btp.get_render_size().x - ((TILE_SIZE + margin) * 8))/2
+        item_position = Vec(
+            base_x,
+            TILE_SIZE * 2
+        )
 
-        posx = posix
-        posy = TILE_SIZE * 2
-
-        x = 0
+        y = 1
         for i in range(0, 32):
-            self.inventory_grid.append(
-                [Vec(posx, posy), Vec(TILE_SIZE), None, 0])
-            posx += TILE_SIZE + margin
-            x += 1
-            if x >= 8:
-                x = 0
-                posx = posix
-                posy += TILE_SIZE + margin
+            item: Optional[CollectableItem] = self.inventory_grid[i][0]
+            if item is not None:
+                item.position = center_rect(item_position, Vec(TILE_SIZE), item.size)
+                item.on_draw(0)
+
+            self.btp.draw_rectline(item_position, Vec(TILE_SIZE), WHITE)
+
+            if self.inventory_grid[i][1] > 1:
+                self.btp.draw_text("x"+str(self.inventory_grid[i][1]), item_position + Vec(5), 20, WHITE)
+
+            item_position.x += TILE_SIZE + margin
+            if i+1 >= y*8:
+                print(i)
+                y += 1
+                item_position.x = base_x
+                item_position.y += TILE_SIZE + margin
 
     def update_inventory(self):
         unique: list[list] = []
-
+        it_margin = TILE_SIZE - 20
+        
         for it in self.inventory:
             for uit in unique:
                 if uit[0].name == it.name:
                     uit[1] += 1
                     break
             else:
-                unique.append([it.copy(), 1])
+                item = it.copy()
 
-        i = 0
-        it_margin = TILE_SIZE - 20
-        for it, count in unique:
-            if i >= len(self.inventory_grid):
-                break
+                item.angle = 0
+                item.size.x = (it.size.x*it_margin) / it.size.y
+                item.size.y = it_margin
 
-            it.angle = 0
-            it.size.x = (it.size.x*it_margin) / it.size.y
-            it.size.y = it_margin
-            it.position = center_rect(
-                self.inventory_grid[i][0], Vec(TILE_SIZE), it.size)
+                unique.append([item, 1])
 
-            self.inventory_grid[i][2] = it
-            self.inventory_grid[i][3] = count
-            i += 1
+        self.inventory_grid = unique + [[None, 0]for i in range(32 - len(unique))]
 
-        if len(self.inventory) == 0:
-            self.inventory_selection = -1
-        elif self.inventory_selection >= len(self.inventory):
-            self.inventory_selection = 0
+        if self.inventory_selection is not None:
+            for it in self.inventory_grid:
+                if it[0] is not None and it[0].name == self.inventory_selection.name:
+                    break
+            else:
+                self.inventory_selection = None
 
     def is_alive(self):
         return self.life > 0
@@ -138,8 +143,7 @@ class Character(ComponentObject):
     def on_action(self, action: ActionEvent) -> Any:
         if action.name == DungeonActionTypes.COLLECT:
             if isinstance(action.object, Chest) and self.atlas is not None:
-                items: list[CollectableItem] = action.object.get_items(
-                    self.atlas)
+                items: list[CollectableItem] = action.object.get_items(self.atlas)
                 self.inventory += items
                 self.update_inventory()
 
@@ -199,13 +203,25 @@ class Character(ComponentObject):
                     self.position += move
                     self.inventory_open = False
 
-            if self.btp.is_key_pressed(Keyboard.CTRL_L):
-                if len(self.inventory) == 0:
-                    self.inventory_selection = -1
-                elif self.inventory_selection + 1 >= len(self.inventory):
-                    self.inventory_selection = 0
+            if self.btp.is_key_pressed(Keyboard.CTRL_L) and len(self.inventory) != 0:
+                if self.inventory_selection is None:
+                    self.inventory_selection = self.inventory[0].copy()
                 else:
-                    self.inventory_selection += 1
+                    for i in range(0, len(self.inventory)):
+                        if self.inventory[i].name == self.inventory_selection.name:
+                            if i + 1 >= len(self.inventory):
+                               continue 
+                            else:
+                                for k in range(i, len(self.inventory)):
+                                    if self.inventory[k].name != self.inventory_selection.name:
+                                        self.inventory_selection = self.inventory[k].copy()
+                                        break
+                                else:
+                                    continue
+                                break
+                    else:
+                        self.inventory_selection = self.inventory[0].copy()
+                
 
     def get_frame(self, dt: float):
         frames = getattr(self, self.state)
@@ -228,32 +244,37 @@ class Character(ComponentObject):
         self.btp.draw_rect(Vec(), self.btp.get_render_size(),
                            Color(0, 0, 0, 100))
 
-        for pos, size, item, count in self.inventory_grid:
-            self.btp.draw_rectline(pos, size, WHITE)
-            if item is not None:
-                item.on_draw(dt)
-
-            if count > 1:
-                self.btp.draw_text("x"+str(count), pos + Vec(5), 20, WHITE)
+        self.draw_inventory()
 
     def on_draw(self, dt: float):
         self.btp.draw_image(self.get_frame(
             dt), self.position, self.size * self.flip, 0)
 
-        if self.inventory_selection != -1:
-            item: CollectableItem = self.inventory[self.inventory_selection]
+        if self.inventory_selection is not None:
+            item: CollectableItem = self.inventory_selection
 
-            item.position = self.position + self.size * Vec(0.95, 0.55)
+            item.position = self.position + self.size * Vec(0.90, 0.55)
+            item.position.y -= item.size.y/2
             item.angle = self.inventory_item_angle
+
+            min_angle = -10
+            max_angle = 70
+
+            # TODO: fix angle when player is flip
+            item.flip.x = self.flip.x
+            if self.flip.x == -1:
+                item.position -= Vec(self.size.x, 0)
+                max_angle = -max_angle
+                min_angle = -min_angle
 
             angle_move = 200 * dt
             if not self.inventory_item_angle_dir:
                 angle_move = -300 * dt
 
             self.inventory_item_angle += angle_move
-            if self.inventory_item_angle >= 70:
+            if self.inventory_item_angle >= max_angle:
                 self.inventory_item_angle_dir = False
-            elif self.inventory_item_angle <= -10:
+            elif self.inventory_item_angle <= min_angle:
                 self.inventory_item_angle_dir = True
 
-            self.inventory[self.inventory_selection].on_draw(dt)
+            self.inventory_selection.on_draw(dt)
