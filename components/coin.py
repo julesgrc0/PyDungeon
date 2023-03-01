@@ -10,3 +10,8 @@ class Coin(CollectableItem):
     @staticmethod
     def check_name(name: str) -> bool:
         return name.startswith('coin')
+    
+    def on_ready(self, btp: Win) -> None:
+        super().on_ready(btp)
+
+        self.size /= 3

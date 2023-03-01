@@ -1,7 +1,9 @@
 from components.chest import Chest
+from components.coin import Coin
+from components.flask import Flask
 from components.weapon import Weapon
 from core import *
-from utility import TILE_SIZE, DungeonActionData, DungeonActionTypes, DungeonRoleTypes, Keyboard, rect_rect_center, center_rect, WHITE
+from utility import TILE_SIZE, DungeonActionData, DungeonActionTypes, DungeonRoleTypes, Keyboard, rect_rect_center, center_rect, WHITE, rotate_around
 
 
 class Character(ComponentObject):
@@ -27,6 +29,10 @@ class Character(ComponentObject):
         self.inventory: list[CollectableItem] = []
         self.inventory_open: bool = False
         self.inventory_grid: list[list] = []
+
+        self.inventory_selection: int = -1
+        self.inventory_item_angle = 0
+        self.inventory_item_angle_dir = True
 
     @staticmethod
     def is_grouped() -> bool:
@@ -104,26 +110,27 @@ class Character(ComponentObject):
                     break
             else:
                 unique.append([it.copy(), 1])
-        
-        
+
         i = 0
         it_margin = TILE_SIZE - 20
         for it, count in unique:
             if i >= len(self.inventory_grid):
                 break
 
-
-            if isinstance(it, Weapon):
-                it.size.x = (it.size.x*it_margin) / it.size.y
-                it.size.y = it_margin
-                it.position = center_rect(self.inventory_grid[i][0], Vec(TILE_SIZE), it.size)
-            else:
-                it.size /= 2
-                it.position = center_rect(self.inventory_grid[i][0], Vec(TILE_SIZE), it.size)
+            it.angle = 0
+            it.size.x = (it.size.x*it_margin) / it.size.y
+            it.size.y = it_margin
+            it.position = center_rect(
+                self.inventory_grid[i][0], Vec(TILE_SIZE), it.size)
 
             self.inventory_grid[i][2] = it
             self.inventory_grid[i][3] = count
             i += 1
+
+        if len(self.inventory) == 0:
+            self.inventory_selection = -1
+        elif self.inventory_selection >= len(self.inventory):
+            self.inventory_selection = 0
 
     def is_alive(self):
         return self.life > 0
@@ -131,7 +138,8 @@ class Character(ComponentObject):
     def on_action(self, action: ActionEvent) -> Any:
         if action.name == DungeonActionTypes.COLLECT:
             if isinstance(action.object, Chest) and self.atlas is not None:
-                items = action.object.get_items(self.atlas)
+                items: list[CollectableItem] = action.object.get_items(
+                    self.atlas)
                 self.inventory += items
                 self.update_inventory()
 
@@ -191,6 +199,14 @@ class Character(ComponentObject):
                     self.position += move
                     self.inventory_open = False
 
+            if self.btp.is_key_pressed(Keyboard.CTRL_L):
+                if len(self.inventory) == 0:
+                    self.inventory_selection = -1
+                elif self.inventory_selection + 1 >= len(self.inventory):
+                    self.inventory_selection = 0
+                else:
+                    self.inventory_selection += 1
+
     def get_frame(self, dt: float):
         frames = getattr(self, self.state)
         if len(frames) != 0:
@@ -202,9 +218,6 @@ class Character(ComponentObject):
     def on_draw_ui(self, dt: float):
         if self.action_data.role != DungeonRoleTypes.PLAYER:
             return
-
-        
-
 
         if self.btp.is_key_pressed(Keyboard.SPACE):
             self.inventory_open = not self.inventory_open
@@ -226,3 +239,21 @@ class Character(ComponentObject):
     def on_draw(self, dt: float):
         self.btp.draw_image(self.get_frame(
             dt), self.position, self.size * self.flip, 0)
+
+        if self.inventory_selection != -1:
+            item: CollectableItem = self.inventory[self.inventory_selection]
+
+            item.position = self.position + self.size * Vec(0.95, 0.55)
+            item.angle = self.inventory_item_angle
+
+            angle_move = 200 * dt
+            if not self.inventory_item_angle_dir:
+                angle_move = -300 * dt
+
+            self.inventory_item_angle += angle_move
+            if self.inventory_item_angle >= 70:
+                self.inventory_item_angle_dir = False
+            elif self.inventory_item_angle <= -10:
+                self.inventory_item_angle_dir = True
+
+            self.inventory[self.inventory_selection].on_draw(dt)

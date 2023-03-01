@@ -133,7 +133,7 @@ class Dungeon(Win):
 
 
 def main(args):
-    Dungeon().start(1680, 1050, "Dungeon - BTP v{}".format(BTP.BTP.__version__), False)
+    Dungeon().start(1680, 1050,"Dungeon - BTP v{} | {}".format(BTP.BTP.__version__, BTP.BTP.__libvers__), False)
     return 0
 
 

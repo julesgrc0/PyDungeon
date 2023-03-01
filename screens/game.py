@@ -31,11 +31,11 @@ class Game(Screen):
     def on_ready(self):
         self.map.on_ready()
 
-        characters: list[Character] = self.atlas.from_instance(Character)
-        self.character = random.choice(characters).copy()
+        # characters: list[Character] = self.atlas.from_instance(Character)
+        # random.choice(characters).copy()
+        self.character = self.atlas.copy(Character, "knight_m")
         self.character.atlas = self.atlas
-        self.character.action_data = DungeonActionData(
-            role=DungeonRoleTypes.PLAYER)
+        self.character.action_data = DungeonActionData(role=DungeonRoleTypes.PLAYER)
 
         self.hearts = self.atlas.copy(Hearts, "hearts")
         self.hearts.position = self.btp.get_render_size() * Vec(0.1, 0.9)
@@ -54,11 +54,7 @@ class Game(Screen):
         self.character.on_update_control(dt, self.map.get_collision_tiles())
         self.character.on_draw(dt)
 
-        # self.angle += dt * 100
-        # pos = self.character.position + Vec(self.character.size.x/4, self.character.size.y/4)
-        # size = Vec(50)
-        # newp = rotate_around(pos, pos+size/2, self.angle)
-        # self.btp.draw_rectrot(newp, size, self.angle, Color(255, 0, 0, 255))
+     
         return NextScreen()
 
     def on_draw_ui(self, dt: float) -> NextScreen:
