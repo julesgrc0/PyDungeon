@@ -72,6 +72,8 @@ class ObjectBase:
         self.position: Vec = Vec()
         self.size: Vec = Vec()
         self.flip: Vec = Vec(1)
+        self.origin:Vec = Vec(-1)
+        self.angle:float = 0
 
         self.animation_speed: float = 10.0
         self.animation_index: float = 0.0
@@ -93,21 +95,18 @@ class ObjectBase:
     def copy(self):
         classbase = type(self)
         cp = classbase(copy.deepcopy(self.texture))
-
-        for attr_name in dir(self):
-            if attr_name.startswith('_'):
-                continue
-
-            attr = getattr(self, attr_name, None)
-            if attr is None or callable(attr):
+    
+        for attr_name, attr in vars(self).items():
+            if callable(attr) or attr is None:
                 continue
             
             try:
                 setattr(cp, attr_name, copy.copy(attr))
             except:
                 setattr(cp, attr_name, attr)
-
+    
         return cp
+    
 
 
 class ObjectBaseAtlas:
@@ -218,7 +217,7 @@ class ComponentObject(ActionObject, Component):
 
     def on_draw(self, dt: float) -> None:
         self.btp.draw_image(self.get_frame(
-            dt), self.position, self.size * self.flip, 0)
+            dt), self.position, self.size * self.flip, self.angle, self.origin)
 
     def on_ready(self, btp: Win) -> None:
         self.btp = btp

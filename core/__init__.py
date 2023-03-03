@@ -19,15 +19,9 @@ class CollectableItem(ComponentObject):
 
     def __init__(self, texture: Texture | AnimatedTexture) -> None:
         super().__init__(texture)
-        self.angle = 0
-        self.origin = Vec(-1)
 
     def on_ready(self, btp: Win) -> None:
         super().on_ready(btp)
-        self.origin = Vec(0,self.size.y/2)
-
-    def on_draw(self, dt: float) -> None:
-        self.btp.draw_image(self.get_frame(dt), self.position, self.size * self.flip, self.angle, self.origin)
 
 @dataclass
 class NextScreen:

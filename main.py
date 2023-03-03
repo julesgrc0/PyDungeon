@@ -133,9 +133,15 @@ class Dungeon(Win):
 
 
 def main(args):
-    Dungeon().start(1680, 1050,"Dungeon - BTP v{} | {}".format(BTP.BTP.__version__, BTP.BTP.__libvers__), False)
+    size = (0,0)
+    fullscreen = True
+    if "--debug" in args:
+        size = (1280,960)
+        fullscreen = False
+
+    Dungeon().start(*size, "Dungeon - BTP v{} | {}".format(BTP.BTP.__version__,BTP.BTP.__libvers__), fullscreen)
     return 0
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[:1]))
+    sys.exit(main(sys.argv[1:]))
