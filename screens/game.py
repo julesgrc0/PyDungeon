@@ -1,8 +1,9 @@
 from core import *
 from components import *
 
-import random
-from map import Map
+from screens.gamemap import GameMap
+from components import Hearts
+
 from utility import Stats, DungeonActionData, DungeonRoleTypes, BLACK, Keyboard, DungeonScreens
 
 class Game(Screen):
@@ -13,9 +14,9 @@ class Game(Screen):
         self.last_key = 0
         self.index = 0
         self.stats = Stats(self.btp)
-        self.map = Map(self.btp, self.atlas)
+        self.map = GameMap(self.btp, self.atlas)
 
-        self.character: Optional[Character] = None
+        # self.character: Optional[Character] = None
         self.hearts: Optional[Hearts] = None
 
     
@@ -33,9 +34,9 @@ class Game(Screen):
 
         # characters: list[Character] = self.atlas.from_instance(Character)
         # random.choice(characters).copy()
-        self.character = self.atlas.copy(Character, "knight_m")
-        self.character.atlas = self.atlas
-        self.character.action_data = DungeonActionData(role=DungeonRoleTypes.PLAYER)
+        # self.character = self.atlas.copy(Character, "knight_m")
+        # self.character.atlas = self.atlas
+        # self.character.action_data = DungeonActionData(role=DungeonRoleTypes.PLAYER)
 
         self.hearts = self.atlas.copy(Hearts, "hearts")
         self.hearts.position = self.btp.get_render_size() * Vec(0.1, 0.9)
@@ -43,18 +44,15 @@ class Game(Screen):
 
     def on_draw(self, dt: float):
         self.btp.camera_follow_rect(
-            self.character.position,
-            self.character.size,
+            self.map.player_ref.position,
+            self.map.player_ref.size,
             0.0,  # min distance
             0.0,  # speed
             0.0  # min speed
         )
 
         self.map.on_draw(dt)
-        self.character.on_update_control(dt, self.map.get_collision_tiles())
-        self.character.on_draw(dt)
 
-     
         return NextScreen()
 
     def on_draw_ui(self, dt: float) -> NextScreen:
@@ -69,12 +67,12 @@ class Game(Screen):
 
         self.stats.on_draw(Vec(), 20, BLACK)
 
-        self.character.on_draw_ui(dt)
+        self.map.on_draw_ui(dt)
 
-        self.hearts.update_hearts(self.character.life)
+        self.hearts.update_hearts(self.map.player_ref.life)
         self.hearts.on_draw(dt)
 
-        if self.btp.is_key_pressed(Keyboard.ENTER) or not self.character.is_alive():
+        if self.btp.is_key_pressed(Keyboard.ENTER) or not self.map.player_ref.is_alive():
             return NextScreen(DungeonScreens.MENU)
         
         return NextScreen(DungeonScreens.GAME)

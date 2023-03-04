@@ -4,12 +4,10 @@ import BTP.BTP
 import os
 import sys
 
-from core import *
+from core import ComponentObject, TextureAtlas, ObjectBaseAtlas
 from components import *
-from utility import *
-from map import *
-
-from screens import *
+from utility import DungeonScreens, DungeonActionTypes, TILE_SIZE
+from screens import Menu, Game, MapCreator, Loading
 
 
 class Dungeon(Win):
@@ -110,24 +108,27 @@ class Dungeon(Win):
         self.loading.on_draw(dt)
 
     def on_load(self) -> None:
-        if not os.path.exists(Dungeon.ASSETS_DIR):
-            self.no_assets = True
-            return
+        try:
+            if not os.path.exists(Dungeon.ASSETS_DIR):
+                self.no_assets = True
+                return
 
-        files = os.listdir(Dungeon.ASSETS_DIR)
-        for filename in files:
-            texture_path = os.path.abspath(Dungeon.ASSETS_DIR + filename)
-            texture_id = self.load_image(texture_path)
+            files = os.listdir(Dungeon.ASSETS_DIR)
+            for filename in files:
+                texture_path = os.path.abspath(Dungeon.ASSETS_DIR + filename)
+                texture_id = self.load_image(texture_path)
 
-            self.texture_atlas.add(filename, texture_id)
+                self.texture_atlas.add(filename, texture_id)
 
-        for type in self.object_base:
-            self.objects_atlas.register(type)
+            for type in self.object_base:
+                self.objects_atlas.register(type)
 
-        for texture in self.texture_atlas.textures:
-            self.objects_atlas.add(texture)
+            for texture in self.texture_atlas.textures:
+                self.objects_atlas.add(texture)
 
-        self.menu.on_load()
+            self.menu.on_load()
+        except Exception as e:
+            print(e)
 
         # time.sleep(3)
 
