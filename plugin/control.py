@@ -1,13 +1,23 @@
+import random
+
 from BTP.BTP import *
 from core import *
-from components.character import Character, CharacterPlugin
+
 from utility import Keyboard
+from components.weapon import Weapon
+from components.character import Character, CharacterPlugin
 
 
 class CharacterControlPlugin(CharacterPlugin):
 
-    def __init__(self, character: Character) -> None:
-        super().__init__(character)
+    def __init__(self, character: Character, atlas: Optional[ObjectBaseAtlas]) -> None:
+        super().__init__(character, atlas)
+        
+        if self.atlas is not None:
+            items = self.atlas.from_instance(Weapon)
+            item: Weapon = random.choice(items).copy()
+
+        self.character.inventory.update_inventory([ item ])
        
 
     def get_name(self) -> str:
@@ -47,5 +57,5 @@ class CharacterControlPlugin(CharacterPlugin):
                     self.character.position += move
                     self.character.inventory.inventory_open = False
 
-            if self.character.btp.is_key_pressed(Keyboard.CTRL_L) and len(self.character.inventory) != 0:
-                self.character.select_inventory()
+            if self.character.btp.is_key_pressed(Keyboard.CTRL_L) and len(self.character.inventory.inventory) != 0:
+                self.character.inventory.select_inventory()

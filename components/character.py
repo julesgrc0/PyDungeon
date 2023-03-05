@@ -15,8 +15,9 @@ class CharacterData:
 
 
 class CharacterPlugin:
-    def __init__(self, character: Any) -> None:
-        self.character = character
+    def __init__(self, character, atlas: Optional[ObjectBaseAtlas] = None) -> None:
+        self.character: Character = character
+        self.atlas: Optional[ObjectBaseAtlas] = atlas
 
     def on_update_control(self, dt: float, collision_tiles: list[ComponentObject]):
         pass
@@ -25,20 +26,19 @@ class CharacterPlugin:
         return "default"
 
     @staticmethod
-    def load(name: str, character: Any):
-        spec = util.spec_from_file_location(name, os.path.join(
-            os.path.abspath('./plugin'), name+'.py'))
-        plugin = util.module_from_spec(spec)
-        spec.loader.exec_module(plugin)
+    def load(name: str, character, atlas: Optional[ObjectBaseAtlas] = None):
+        try:
+            spec = util.spec_from_file_location(name, os.path.join( os.path.abspath('./plugin'), name+'.py'))
+            plugin = util.module_from_spec(spec)
+            spec.loader.exec_module(plugin)
 
-        plugin_class = getattr(plugin, 'Character'+name.title()+'Plugin', None)
+            plugin_class = getattr(plugin, 'Character'+name.title()+'Plugin', None)
 
-        if plugin_class is not None and callable(plugin_class):
-            try:
-                obj = plugin_class(character)
+            if plugin_class is not None and callable(plugin_class):
+                obj = plugin_class(character, atlas)
                 return obj
-            except:
-                pass
+        except:
+            pass
 
         return CharacterPlugin(character)
 
@@ -62,7 +62,7 @@ class Character(ComponentObject):
 
         self.atlas: Optional[ObjectBaseAtlas] = None
         self.inventory: Optional[CharacterInventory] = None
-        self.plugin: CharacterPlugin = CharacterPlugin(self)
+        self.plugin: CharacterPlugin = CharacterPlugin(self, self.atlas)
 
 
     @staticmethod
@@ -77,6 +77,13 @@ class Character(ComponentObject):
     def check_name(name: str):
         return name.endswith('idle') or name.endswith('run') or name.endswith('hit')
 
+    def copy(self):
+        obj = super().copy()
+        obj.inventory = CharacterInventory(obj.btp, obj)
+        obj.inventory.update_inventory(copy.copy(self.inventory.inventory))
+        return obj
+        
+
     def to_data(self) -> CharacterData:
         data = CharacterData()
         data.position = self.position
@@ -89,13 +96,17 @@ class Character(ComponentObject):
     def from_data(data: CharacterData, atlas: ObjectBaseAtlas):
         character: Character = atlas.copy(Character, data.name)
         character.position = data.position
-        character.action_data = data.action_data
+        character.atlas = atlas
 
         # TODO: !!!!
-
+        # character.action_data = data.action_data
         # if data.plugin_name != "default":
             # character.plugin = CharacterPlugin.load(data.plugin_name, character)
-        character.plugin = CharacterPlugin.load("control", character)
+
+        # DEBUG
+        character.action_data = DungeonActionData(role=DungeonRoleTypes.PLAYER)
+        character.plugin = CharacterPlugin.load("control", character, atlas)
+        
         return character
     
 
@@ -119,7 +130,8 @@ class Character(ComponentObject):
 
     def on_ready(self, btp: Win) -> None:
         super().on_ready(btp)
-        self.inventory = CharacterInventory(self.btp, self)
+        self.inventory = CharacterInventory(btp, self)
+
         if is_animated(self.texture) and len(self.texture.textures) == len(self.texture.textures_names):
             for index in range(0, len(self.texture.textures)):
                 last = self.texture.textures_names[index].split('_')
@@ -135,7 +147,7 @@ class Character(ComponentObject):
     def is_alive(self):
         return self.life > 0
 
-    def on_action(self, action: ActionEvent) -> Any:
+    def on_action(self, action: ActionEvent) -> Any: 
         if action.name == DungeonActionTypes.COLLECT:
             if isinstance(action.object, Chest) and self.atlas is not None:
                 self.inventory.update_inventory(action.object.get_items(self.atlas))
@@ -294,6 +306,7 @@ class CharacterInventory:
 
             item.position.x = self.character.position.x
             item.position.y = self.character.position.y - item.size.y/2
+            
 
             item.flip.x = self.character.flip.x
             item.angle = self.item_angle if self.character.flip.x == 1 else 360 - self.item_angle

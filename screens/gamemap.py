@@ -7,8 +7,7 @@ class GameMap(MapBase):
 
     def __init__(self, btp: Win, atlas: ObjectBaseAtlas) -> None:
         super().__init__(btp, atlas)
-        self.collision_tiles: list[ComponentObject] = []
-        self.collision_update = False
+        self.player_tiles_collision: list[ComponentObject] = []
         self.view_tile_count = 0
         
 
@@ -31,15 +30,7 @@ class GameMap(MapBase):
             tcount += len(chunk.tiles_view)
         self.view_tile_count = tcount
 
-        self.collision_tiles = tmp
-        self.collision_update = True
-
-    def has_collision_update(self):
-        return self.collision_update
-
-    def get_collision_tiles(self) -> list[ComponentObject]:
-        self.collision_update = False
-        return self.collision_tiles
+        self.player_tiles_collision = tmp
     
     def on_draw_ui(self, dt: float):
         self.player_ref.on_draw_ui(dt)
@@ -47,11 +38,12 @@ class GameMap(MapBase):
     def on_draw(self, dt: float):
         super().on_draw(dt)
 
-        for entity in self.entities_refs:
-            entity.on_update_control(dt, self.get_collision_tiles())
-            entity.on_draw(dt)
+        # TODO: collision and ref for each entity + thread -> update_control
+        # for entity in self.entities_refs:
+        #     entity.on_update_control(dt, self.get_collision_tiles())
+        #     entity.on_draw(dt)
 
-        self.player_ref.on_update_control(dt, self.get_collision_tiles())
+        self.player_ref.on_update_control(dt, self.player_tiles_collision)
         self.player_ref.on_draw(dt)
 
 
