@@ -66,6 +66,9 @@ def draw_key_interract(btp: Win, key: str, position: Vec):
 def center_rect(p1: Vec, s1: Vec, s2: Vec):
     return p1 + (s1-s2)/2
 
+def reduce_box(p1: Vec, s1: Vec, reduce: Vec):
+    return (p1 + s1 * reduce, s1 * (Vec(1) - reduce))
+
 def rotate_around(pos: Vec, origin: Vec,  deg: float) -> Vec:
     theta = (deg*math.pi)/180
 

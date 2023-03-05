@@ -1,6 +1,10 @@
+import threading
+import time
 from BTP.BTP import *
+from components.character import Character
 from core import *
 from map import *
+from utility import center_rect
 
 
 class GameMap(MapBase):
@@ -11,40 +15,74 @@ class GameMap(MapBase):
         self.view_tile_count = 0
         
 
+    def on_character_view_update(self, position: Vec, size: Vec, zone: Vec = Vec(1,1)):
+        chunks = []
+        collisions = []
+        tcount = 0
+
+        screen_size = self.btp.get_render_size()
+        screen_position = position - (self.btp.get_render_size() - size)/2
+        
+        zone_size = size * zone
+        zone_position = center_rect(position, size, zone_size)
+
+        for chunk in self.map:
+            if self.btp.col_rect_rect(screen_position, screen_size, chunk.position, chunk.size):
+                chunks.append(chunk)
+
+                chunk.update_view()
+                tcount += len(chunk.tiles_view)
+
+                for tile in chunk.tiles_view:
+                    if tile.collision and self.btp.col_rect_rect(tile.position, tile.size, zone_position, zone_size) and isinstance(tile, ComponentObject):
+                        collisions.append(tile)
+
+                if len(chunks) >= (self.max_chunks.x * self.max_chunks.y):
+                    break
+
+
+        return (chunks, collisions, tcount)
+
     def on_view_update(self):
-        tmp = []
         size = (self.btp.get_render_size() - self.btp.camera_offset*2)
         position = self.btp.camera_pos
-    
-        size *= 2
-        position -= size/4
+        
+        self.view_chunks, self.player_tiles_collision, self.view_tile_count = self.on_character_view_update(position, size, Vec(3))
+        
 
-
-        tcount = 0
-        for chunk in self.view_chunks:
-            chunk.update_view()
-            for tile in chunk.tiles_view:
-                if tile.collision and self.btp.col_rect_rect(tile.position, tile.size, position, size) and isinstance(tile, ComponentObject):
-                    tmp.append(tile)
-
-            tcount += len(chunk.tiles_view)
-        self.view_tile_count = tcount
-
-        self.player_tiles_collision = tmp
-    
     def on_draw_ui(self, dt: float):
         self.player_ref.on_draw_ui(dt)
+
+    def start_update_thread(self):
+        super().start_update_thread()
+
+        if self.update_thread:
+            threading.Thread(target=self.entities_update_thread).start()            
+
+    def entities_update_thread(self):
+        start_time = time.time()
+        end_time = time.time()
+
+        while self.update_thread and self.btp.is_running():
+            dt = start_time - end_time
+            end_time = start_time
+            start_time = time.time()
+
+            for entity in self.entities_refs:
+                chunks, collisions, tcount = self.on_character_view_update(*entity.get_rect())
+                entity.on_update_control(dt, collisions)
+            
 
     def on_draw(self, dt: float):
         super().on_draw(dt)
 
-        # TODO: collision and ref for each entity + thread -> update_control
-        # for entity in self.entities_refs:
-        #     entity.on_update_control(dt, self.get_collision_tiles())
-        #     entity.on_draw(dt)
+        for entity in self.entities_refs:
+            entity.on_draw(dt)
 
         self.player_ref.on_update_control(dt, self.player_tiles_collision)
         self.player_ref.on_draw(dt)
+
+
 
 
 """

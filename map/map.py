@@ -56,9 +56,18 @@ class MapBase:
     def force_update_view(self):
         self.force_update = True
 
+
     def on_view_update(self):
-        for chunk in self.view_chunks:
-            chunk.update_view()
+        tmp = []
+        for chunk in self.map:
+            if self.btp.col_rect_rect(self.btp.camera_pos - self.btp.camera_offset, self.btp.get_render_size(), chunk.position, chunk.size):
+                tmp.append(chunk)
+                chunk.update_view()
+
+                if len(tmp) >= (self.max_chunks.x * self.max_chunks.y):
+                    break
+
+        self.view_chunks = tmp
 
     # def on_entities_update(self, dt: float, collisions: list[ComponentObject]):
     #     for entity in self.entities_refs:
@@ -74,14 +83,6 @@ class MapBase:
                 if self.force_update:
                     self.force_update = False
 
-                tmp = []
-                for chunk in self.map:
-                    if self.btp.col_rect_rect(self.btp.camera_pos - self.btp.camera_offset, self.btp.get_render_size(), chunk.position, chunk.size):
-                        tmp.append(chunk)
-                        if len(tmp) >= (self.max_chunks.x * self.max_chunks.y):
-                            break
-
-                self.view_chunks = tmp
                 self.on_view_update()
 
     # draw chunks

@@ -3,7 +3,7 @@ import os
 from core import *
 from importlib import util
 from components.chest import Chest
-from utility import TILE_SIZE, DungeonActionData, DungeonActionTypes, DungeonRoleTypes, Keyboard, rect_rect_center, center_rect, WHITE
+from utility import TILE_SIZE, DungeonActionData, DungeonActionTypes, DungeonRoleTypes, Keyboard, rect_rect_center, center_rect, WHITE, reduce_box
 
 class CharacterData:
     
@@ -109,6 +109,9 @@ class Character(ComponentObject):
         
         return character
     
+    
+    def get_rect(self):
+        return reduce_box(self.position, self.size, Vec(0, 0.4))
 
     def damage(self, value: float):
         self.life -= value
@@ -152,11 +155,13 @@ class Character(ComponentObject):
             if isinstance(action.object, Chest) and self.atlas is not None:
                 self.inventory.update_inventory(action.object.get_items(self.atlas))
 
-    def can_move(self, move: Vec, collision_tiles: list[ComponentObject]) -> bool:
+    def can_move(self, move: Vec, collisions: list[ComponentObject]) -> bool:
         ref: Optional[ObjectBase] = None
- 
-        for tile in collision_tiles:
-            if self.btp.col_rect_rect(tile.position, tile.size, self.position + move, self.size):
+
+        position, size = self.get_rect()
+
+        for tile in collisions:
+            if self.btp.col_rect_rect(tile.position, tile.size, position + move, size):
                 ref = tile
                 continue
             elif tile.accept_action(DungeonActionTypes.AROUND):
@@ -166,7 +171,7 @@ class Character(ComponentObject):
         if ref is None:
             return True
 
-        if self.btp.col_rect_rect(ref.position, ref.size, self.position, self.size):
+        if self.btp.col_rect_rect(ref.position, ref.size, position, size):
             can = ref.on_action(ActionEvent.create(DungeonActionTypes.COLLISION_IN, self, self.action_data))
             return True if not isinstance(can, bool) else can
 
@@ -174,8 +179,8 @@ class Character(ComponentObject):
         return False if not isinstance(can, bool) else can
 
 
-    def on_update_control(self, dt: float, collision_tiles: list[ComponentObject]):
-        self.plugin.on_update_control(dt, collision_tiles)
+    def on_update_control(self, dt: float, collisions: list[ComponentObject]):
+        self.plugin.on_update_control(dt, collisions)
 
 
     def get_frame(self, dt: float):
